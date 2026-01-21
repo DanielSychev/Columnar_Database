@@ -1,41 +1,35 @@
 #include <iostream>
 #include <string>
-#include <variant>
-#include <vector>
 #include <CSV_reader/reader.h>
 #include <CSV_writer/writer.h>
 #include <engine/data_storage.h>
+#include <engine/schema.h>
+#include <engine/batch.h>
+
+const size_t batch_rows_count = 1;
 
 int main() {
     std::string schema_path = "//Users//mac//Columnar_Database//src//TestFiles//schema.csv";
-    std::ifstream schema_reader = std::ifstream(schema_path);
-    Reader type_reader(schema_reader);
-    DataStorage ds;
-    std::vector<std::string> res;
-    while(type_reader.ReadLine(res)) {
-        if (res.size() != 2) {
-            std::cerr << "pepe watafa" << std::endl;
-            exit(0);
-        }
-        ds.AddColumn(res[0], res[1]);
-    }
+    std::ifstream schema_stream(schema_path);
+    Reader type_reader(schema_stream);
+    Schema schema;
+    schema.ReadSchema(type_reader);
+
+    std::ofstream writer_stream("//Users//mac//Columnar_Database//src//TestFiles//output.csv");
+    Writer writer(writer_stream);
+    schema.Print(writer);
+
     std::string data_path = "//Users//mac//Columnar_Database//src//TestFiles//data.csv";
-    std::ifstream data_reader = std::ifstream(data_path);
-    Reader row_reader(data_reader);
-    size_t col_num = ds.ColSize();
-    // size_t i = 0; // номер строки (for row group)
-    while (row_reader.ReadLine(res)) {
-        if (res.size() != col_num) {
-            std::cerr << "wrong pepe format" << std::endl;
-            exit(0);
+    std::ifstream data_stream(data_path);
+    Reader row_reader(data_stream);
+
+    while (true) {
+        Batch batch(schema);
+        if (!batch.ReadBatch(row_reader, batch_rows_count)) {
+            break;
         }
-        for (size_t j = 0; j < col_num; ++j) {
-            ds.AddElem(j, res[j]);
-        }
-        // ++i;
+        batch.Print(writer);
     }
-    Writer sneaky_writer(std::cout);
-    ds.Print(sneaky_writer);
 
     // std::stringstream ss;
     // ss << "aaa" << "pepe\n";

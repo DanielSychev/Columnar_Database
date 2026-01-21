@@ -12,7 +12,7 @@ public:
     Writer(std::ostream& ss, char delimetr = ',');
     void WriteDataStorage(const DataStorage& data);
     void WriteElem(int64_t x, bool);
-    void WriteElem(const std::string& s, bool);
+    void WriteElem(const std::string& s, bool); // флаг bool = true, если конец ряда
     void CheckFlag(bool fl);
 private:
     std::ostream& out_;

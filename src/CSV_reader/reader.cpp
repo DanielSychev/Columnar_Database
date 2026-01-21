@@ -49,3 +49,18 @@ bool Reader::ReadLine(std::vector<std::string>& result) {
     result.push_back(cur_string);
     return true;
 }
+
+bool Reader::ReadRows(std::vector<std::vector<std::string>>& rows, size_t n) {
+    if (rows.size() != n) {
+        throw std::runtime_error("rows size is not enough to hold all rows");
+    }
+    for (size_t i = 0; i < n; ++i) {
+        if (!ReadLine(rows[i])) {
+            if (i == 0) { // ничего не прочитали
+                return false;
+            }
+            break;
+        }
+    }
+    return true;
+}
