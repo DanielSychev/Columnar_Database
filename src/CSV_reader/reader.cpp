@@ -1,6 +1,6 @@
 #include "CSV_reader/reader.h"
 #include <iostream>
-
+#include <stdexcept>
 // Reader::Reader(const std::string& filename, char delimetr) : delimetr_(delimetr) {
 //     file_ = new std::ifstream(filename);
 // }
@@ -63,4 +63,18 @@ bool Reader::ReadRows(std::vector<std::vector<std::string>>& rows, size_t n) {
         }
     }
     return true;
+}
+
+void Reader::SetPos(size_t pos) {
+    file_.seekg(static_cast<std::streamoff>(pos), std::ios::beg);
+}
+
+size_t Reader::ReadLastBytes() {
+    file_.seekg(-static_cast<std::streamoff>(sizeof(size_t)), std::ios::end);
+    if (file_.tellg() < 0) {
+        throw std::runtime_error("file is too small for last number");
+    }
+    size_t value;
+    BinaryRead(value);
+    return value;
 }

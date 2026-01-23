@@ -1,5 +1,6 @@
-#include "schema.h"
+#include "engine/data_storage/schema.h"
 #include <stdexcept>
+#include <iostream>
 
 Schema::Schema() : col_count(0) {}
 
@@ -14,17 +15,19 @@ std::string TypeToString(const Type &t) {
     }
 }
 
-void Schema::ReadSchema(Reader& type_reader) {
+void Schema::ReadSchema(Reader& type_reader, size_t col_count_) {
     std::vector<std::string> res;
-    while(type_reader.ReadLine(res)) {
+    size_t i = 0;
+    while(i < col_count_ && type_reader.ReadLine(res)) {
         if (res.size() != 2) {
             throw std::runtime_error("bad schema was given");
             exit(0);
         }
         names.push_back(std::move(res[0]));
         types.push_back(ValidateType(res[1]));
+        ++i;
     }
-    col_count = names.size();
+    col_count = i;
 }
 
 Type Schema::ValidateType(const std::string& type) {
@@ -41,7 +44,7 @@ size_t Schema::NumColums() {
     return col_count;
 }
 
-void Schema::Print(Writer& writer) {
+void Schema::PrintSchema(Writer& writer) {
     for (size_t i = 0; i < col_count; ++i) {
         writer.WriteElem(names[i], false);
         writer.WriteElem(TypeToString(types[i]), true);
