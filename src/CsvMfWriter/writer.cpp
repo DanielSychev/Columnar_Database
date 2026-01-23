@@ -1,6 +1,4 @@
 #include <CsvMfWriter/writer.h>
-#include <cinttypes>
-#include <memory>
 
 Writer::Writer(std::ostream& ss, char delimetr) : out_(ss), delimetr_(delimetr) {
 }

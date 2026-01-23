@@ -9,7 +9,7 @@ void PrintVisitor(Writer& w, const std::vector<T>& v) {
 
 template <typename T>
 void PrintElemVisitor(Writer& w, const std::vector<T>& v, size_t i, bool b) {
-    if (i >= v.size()) { // not bag, a feature
+    if (i >= v.size()) { // not bug, a feature
         return;
     }
     w.WriteElem(v[i], b);

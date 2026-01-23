@@ -1,12 +1,10 @@
 #include "engine/engine.h"
-#include <stdexcept>
-#include <string>
 
-Engine::Engine(std::ifstream& data_stream, std::ofstream& data_writer_stream, std::ifstream& schema_stream) :
-data_reader(data_stream), data_writer(data_writer_stream), type_reader(schema_stream), type_writer(EMPTY_OUTPUT_STREAM) {}
+Engine::Engine(std::ifstream& data_reader_stream, std::ofstream& data_writer_stream, std::ifstream& schema_reader_stream) :
+data_reader(data_reader_stream), data_writer(data_writer_stream), type_reader(schema_reader_stream), type_writer(EMPTY_OUTPUT_STREAM) {}
 
-Engine::Engine(std::ifstream& data_stream, std::ofstream& data_writer_stream, std::ofstream& schema_writer_stream) :
-data_reader(data_stream), data_writer(data_writer_stream), type_reader(EMPTY_INPUT_STREAM), type_writer(schema_writer_stream) {}
+Engine::Engine(std::ifstream& data_reader_stream, std::ofstream& data_writer_stream, std::ofstream& schema_writer_stream) :
+data_reader(data_reader_stream), data_writer(data_writer_stream), type_reader(EMPTY_INPUT_STREAM), type_writer(schema_writer_stream) {}
 
 
 void Engine::CsvToMfBatchProcessor(Schema& schema) {
@@ -32,7 +30,7 @@ void Engine::CsvToMfProcessor() {
     data_writer.BinaryWrite(batch_positions.size()); // пишем количество батчей и позиции
     for (size_t i = 0; i < batch_positions.size(); ++i) {
         data_writer.BinaryWrite(batch_positions[i]);
-        std::cout << batch_positions[i] << std::endl;
+        // std::cout << batch_positions[i] << std::endl;
     }
     
     data_writer.BinaryWrite(pos); // пишем метку в конце, откуда надо читать мету
@@ -44,7 +42,7 @@ void Engine::MfToCsvBatchProcessor(Schema& schema) {
     batch_positions.resize(batch_count);
     for (size_t i = 0; i < batch_positions.size(); ++i) {
         data_reader.BinaryRead(batch_positions[i]);
-        std::cout << batch_positions[i] << std::endl;
+        // std::cout << batch_positions[i] << std::endl;
     }
 
     for (size_t i = 0; i < batch_positions.size(); ++i) { // читаем из my_format и пишем батчи в csv

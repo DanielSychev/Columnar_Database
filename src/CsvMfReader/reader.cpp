@@ -43,15 +43,14 @@ bool Reader::ReadLine(std::vector<std::string>& result) {
         return false;
     }
     if (in_quotes) {
-        std::cerr << "Bad csv was given, not given closing quote";
-        return false;
+        throw std::runtime_error("bad csv was given, not given closing quote");
     }
     result.push_back(cur_string);
     return true;
 }
 
 bool Reader::ReadRows(std::vector<std::vector<std::string>>& rows, size_t n) {
-    if (rows.size() != n) {
+    if (rows.size() < n) {
         throw std::runtime_error("rows size is not enough to hold all rows");
     }
     for (size_t i = 0; i < n; ++i) {
@@ -66,7 +65,7 @@ bool Reader::ReadRows(std::vector<std::vector<std::string>>& rows, size_t n) {
 }
 
 void Reader::SetPos(size_t pos) {
-    file_.seekg(static_cast<std::streamoff>(pos), std::ios::beg);
+    file_.seekg(pos, std::ios::beg);
 }
 
 size_t Reader::ReadLastBytes() {

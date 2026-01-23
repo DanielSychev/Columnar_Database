@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <stdexcept>
 #include "CsvMfReader/reader.h"
 
 TEST(CSV_Reader, BasicQuotes) {
@@ -76,7 +77,7 @@ TEST(CSV_Reader, WrongQuote) {
     std::stringstream s(R"("bla-bla-bla)");
     Reader a(s);
     std::vector<std::string> res;
-    ASSERT_FALSE(a.ReadLine(res));
+    ASSERT_THROW(a.ReadLine(res), std::runtime_error);
 }
 
 TEST(CSV_Reader, DifferentLines) {

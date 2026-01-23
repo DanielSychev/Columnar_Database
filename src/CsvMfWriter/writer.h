@@ -16,8 +16,7 @@ public:
     // Writer(const std::string& file_path, char delimetr = ',');
     Writer(std::ostream& ss, char delimetr = ',');
     void WriteElem(int64_t x, bool);
-    void WriteElem(const std::string& s, bool); // флаг bool = true, если конец ряда
-    void CheckFlag(bool fl);
+    void WriteElem(const std::string& s, bool); // флаг bool = true, если ставим '\n'
     size_t TellPos();
 
     template<concepts_write::BinarySerializable T>
@@ -25,6 +24,8 @@ public:
         out_.write(reinterpret_cast<const char*>(&value), sizeof(T));
     }
 private:
+    void CheckFlag(bool fl);
+    
     std::ostream& out_;
     char delimetr_;
 };
