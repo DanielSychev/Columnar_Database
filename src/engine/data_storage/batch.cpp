@@ -1,74 +1,82 @@
 #include "engine/data_storage/batch.h"
 #include <cstddef>
 #include <memory>
+#include <stdexcept>
 
-Batch::Batch(Schema& schema, size_t batch_rows_count) : schema(schema), batch_rows_count(batch_rows_count) {
+namespace {
+std::shared_ptr<Column> CreateColumn(Type type) {
+    switch (type) {
+    case Type::int64:
+        return std::make_shared<Int64Column>();
+    case Type::str:
+        return std::make_shared<StrColumn>();
+    default:
+        return std::make_shared<StrColumn>();
+    }
+}
+}
+
+Batch::Batch(Schema& schema, size_t batch_rows_count) : batch_rows_count(batch_rows_count) {
     columns.resize(schema.NumColums());
     for (size_t i = 0; i < columns.size(); ++i) {
-        switch (schema.types[i]) {
-        case Type::int64:
-            columns[i] = std::make_shared<Int64Column>();
-            break;
-        case Type::str:
-            columns[i] = std::make_shared<StrColumn>();
-            break;
-        default:
-            columns[i] = std::make_shared<StrColumn>();
-            break;
-            // throw std::runtime_error("bad column type was given");
-        }
+        columns[i] = CreateColumn(schema.types[i]);
     }
 }
 
-bool Batch::CSVReadBatch(Reader& r) {
-    std::vector<std::vector<std::string>> rows(batch_rows_count);
-    if (!r.ReadRows(rows, batch_rows_count)) {
-        return false;
+void Batch::AddRow(std::vector<std::string>&& row) {
+    if (row.size() != columns.size()) {
+        throw std::runtime_error("wrong schema formart / wrong row lenght");
     }
-    
-    for (auto& row : rows) {
-        if (row.empty()) { // конец файла
-            break;
-        }
-        if (row.size() != columns.size()) {
-            throw std::runtime_error("wrong schema formart / wrong row lenght");
-        }
-        for (size_t i = 0; i < row.size(); ++i) {
-            columns[i]->AddElem(std::move(row[i]));
-        }
+    if (rows_count >= batch_rows_count) {
+        throw std::runtime_error("batch is full");
     }
-    return true;
+    for (size_t i = 0; i < row.size(); ++i) {
+        columns[i]->AddElem(std::move(row[i]));
+    }
+    ++rows_count;
 }
 
-bool Batch::MFReadBatch(Reader& r) {
-    std::vector<std::vector<std::string>> mfcolumns(schema.NumColums());
-    if (!r.ReadRows(mfcolumns, schema.NumColums())) {
-        return false;
+void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
+    if (column_index >= columns.size()) {
+        throw std::runtime_error("wrong column index");
     }
-    for (size_t i = 0; i < mfcolumns.size(); ++i) {
-        if (mfcolumns[i].empty()) { // неполный батч (последний который)
-            break;
-        }
-        if (mfcolumns[i].size() > batch_rows_count) {
-            throw std::runtime_error("wrong batch format");
-        }
-        for (auto& elem : mfcolumns[i]) {
-            columns[i]->AddElem(std::move(elem));
-        }
+    if (columns[column_index]->Size() != 0) {
+        throw std::runtime_error("column is already filled");
     }
-    return true;
-}
+    if (values.size() > batch_rows_count) {
+        throw std::runtime_error("wrong batch format");
+    }
 
-void Batch::MFPrintBatch(Writer& writer) {
-    for (auto& column : columns) {
-        column -> Print(writer);
+    if (rows_count == 0) {
+        rows_count = values.size();
+    } else if (values.size() != rows_count) {
+        throw std::runtime_error("wrong batch format");
+    }
+
+    for (auto& value : values) {
+        columns[column_index]->AddElem(std::move(value));
     }
 }
 
-void Batch::CSVPrintBatch(Writer& writer) {
-    for (size_t j = 0; j < batch_rows_count; ++j) {
-        for (size_t i = 0; i < columns.size(); ++i) {
-            columns[i]->PrintElem(writer, j, i == columns.size() - 1);
-        }
+const Column& Batch::ColumnAt(size_t column_index) const {
+    if (column_index >= columns.size()) {
+        throw std::runtime_error("wrong column index");
     }
+    return *columns[column_index];
+}
+
+size_t Batch::RowsCount() const {
+    return rows_count;
+}
+
+size_t Batch::ColumnsCount() const {
+    return columns.size();
+}
+
+size_t Batch::MaxRowsCount() const {
+    return batch_rows_count;
+}
+
+bool Batch::Empty() const {
+    return rows_count == 0;
 }

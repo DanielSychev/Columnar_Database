@@ -19,23 +19,30 @@ void Int64Column::AddElem(std::string&& s) {
     data.push_back(std::stoll(s)); // stoll сам делает throw в случае чего
 }
 
-void Int64Column::Print(Writer& w) {
+void Int64Column::Print(Writer& w) const {
     PrintVisitor(w, data);
 }
 
-void Int64Column::PrintElem(Writer& w, size_t i, bool b) {
+void Int64Column::PrintElem(Writer& w, size_t i, bool b) const {
     PrintElemVisitor(w, data, i, b);
 }
 
+size_t Int64Column::Size() const {
+    return data.size();
+}
 
 void StrColumn::AddElem(std::string&& s) {
     data.push_back(std::move(s));
 }
 
-void StrColumn::Print(Writer& w) {
+void StrColumn::Print(Writer& w) const {
     PrintVisitor(w, data);
 }
 
-void StrColumn::PrintElem(Writer& w, size_t i, bool b) {
+void StrColumn::PrintElem(Writer& w, size_t i, bool b) const {
     PrintElemVisitor(w, data, i, b);
+}
+
+size_t StrColumn::Size() const {
+    return data.size();
 }

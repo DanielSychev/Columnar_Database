@@ -1,4 +1,5 @@
 #include "engine/engine.h"
+#include "engine/serialization/batch_serialization.h"
 #include <iostream>
 
 Engine::Engine(std::ifstream& data_reader_stream, std::ofstream& data_writer_stream, std::ifstream& schema_reader_stream) :
@@ -12,12 +13,12 @@ void Engine::CsvToMfBatchProcessor(Schema& schema) {
     int i = 0;
     while (true) {
         Batch batch(schema, batch_rows_count);
-        if (!batch.CSVReadBatch(data_reader)) {
+        if (!batch_serialization::ReadCsvBatch(data_reader, batch)) {
             break;
         }
         std::cout << "batch " << i++ << " was read" << std::endl;
         batch_positions.push_back(data_writer.TellPos());
-        batch.MFPrintBatch(data_writer);
+        batch_serialization::WriteMfBatch(batch, data_writer);
     }
 }
 
@@ -54,8 +55,10 @@ void Engine::MfToCsvBatchProcessor(Schema& schema) {
     for (size_t i = 0; i < batch_positions.size(); ++i) { // читаем из my_format и пишем батчи в csv
         data_reader.SetPos(batch_positions[i]);
         Batch batch(schema, batch_rows_count);
-        batch.MFReadBatch(data_reader);
-        batch.CSVPrintBatch(data_writer);
+        if (!batch_serialization::ReadMfBatch(data_reader, batch)) {
+            throw std::runtime_error("wrong batch format");
+        }
+        batch_serialization::WriteCsvBatch(batch, data_writer);
     }
 }
 

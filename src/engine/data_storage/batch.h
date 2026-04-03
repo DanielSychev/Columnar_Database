@@ -1,18 +1,24 @@
 #pragma once
 
+#include <cstddef>
+#include <memory>
 #include <vector>
 #include "engine/data_storage/column.h"
-#include "CsvMfReader/reader.h"
 #include "engine/data_storage/schema.h"
 
-struct Batch {
+class Batch {
+public:
     Batch(Schema& schema, size_t batch_rows_count);
-    bool CSVReadBatch(Reader& r); // bool если ничего не прочитали
-    bool MFReadBatch(Reader& r); // batch reader from my format
-    void MFPrintBatch(Writer& writer);
-    void CSVPrintBatch(Writer& writer);
+    void AddRow(std::vector<std::string>&& row);
+    void AddColumn(size_t column_index, std::vector<std::string>&& values);
+    const Column& ColumnAt(size_t column_index) const;
+    size_t RowsCount() const;
+    size_t ColumnsCount() const;
+    size_t MaxRowsCount() const;
+    bool Empty() const;
 
-    Schema& schema;
+private:
     std::vector<std::shared_ptr<Column>> columns;
     size_t batch_rows_count;
+    size_t rows_count = 0;
 };

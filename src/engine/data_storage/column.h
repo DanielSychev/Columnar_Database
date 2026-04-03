@@ -14,8 +14,9 @@
 class Column {
 public:
     virtual void AddElem(std::string&&) = 0; // чтобы move делать
-    virtual void Print(Writer&) = 0;
-    virtual void PrintElem(Writer&, size_t, bool) = 0;
+    virtual void Print(Writer&) const = 0;
+    virtual void PrintElem(Writer&, size_t, bool) const = 0;
+    virtual size_t Size() const = 0;
     virtual ~Column() = default;
 
     Type column_type;
@@ -25,8 +26,9 @@ private:
 class Int64Column : public Column {
 public:
     void AddElem(std::string&&) override;
-    void Print(Writer&) override;
-    void PrintElem(Writer&, size_t, bool) override;
+    void Print(Writer&) const override;
+    void PrintElem(Writer&, size_t, bool) const override;
+    size_t Size() const override;
     ~Int64Column() override = default;
 private:
     std::vector<int64_t> data;
@@ -35,8 +37,9 @@ private:
 class StrColumn : public Column {
 public:
     void AddElem(std::string&&) override;
-    void Print(Writer&) override;
-    void PrintElem(Writer&, size_t, bool) override;
+    void Print(Writer&) const override;
+    void PrintElem(Writer&, size_t, bool) const override;
+    size_t Size() const override;
     ~StrColumn() override = default;
 private:
     std::vector<std::string> data;

@@ -61,3 +61,10 @@ TEST(MF_Writer, BinaryWriteUInt32) {
     s.read(reinterpret_cast<char*>(&value), sizeof(uint32_t));
     EXPECT_EQ(number, value);
 }
+
+TEST(MF_Writer, WriteElemWithNewLine) {
+    std::stringstream s;
+    Writer w(s);
+    w.WriteElem("Line1\nLine2", true);
+    EXPECT_EQ(s.str(), "\"Line1\nLine2\"\n");
+}
