@@ -1,4 +1,5 @@
 #include "engine/engine.h"
+#include <iostream>
 
 Engine::Engine(std::ifstream& data_reader_stream, std::ofstream& data_writer_stream, std::ifstream& schema_reader_stream) :
 data_reader(data_reader_stream), data_writer(data_writer_stream), type_reader(schema_reader_stream), type_writer(EMPTY_OUTPUT_STREAM) {}
@@ -8,11 +9,13 @@ data_reader(data_reader_stream), data_writer(data_writer_stream), type_reader(EM
 
 
 void Engine::CsvToMfBatchProcessor(Schema& schema) {
+    int i = 0;
     while (true) {
         Batch batch(schema, batch_rows_count);
         if (!batch.CSVReadBatch(data_reader)) {
             break;
         }
+        std::cout << "batch " << i++ << " was read" << std::endl;
         batch_positions.push_back(data_writer.TellPos());
         batch.MFPrintBatch(data_writer);
     }
@@ -21,6 +24,9 @@ void Engine::CsvToMfBatchProcessor(Schema& schema) {
 void Engine::CsvToMfProcessor() {
     Schema schema; // пишем батчи
     schema.ReadSchema(type_reader);
+    if (schema.NumColums() == 0) {
+        throw std::runtime_error("schema is empty or was not read");
+    }
     CsvToMfBatchProcessor(schema);
 
     size_t pos = data_writer.TellPos(); // начинаем писать мету + пишем схему

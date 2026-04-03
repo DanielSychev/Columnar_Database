@@ -1,6 +1,5 @@
 #include "engine/data_storage/schema.h"
 #include <stdexcept>
-#include <iostream>
 
 Schema::Schema() : col_count(0) {}
 
@@ -19,9 +18,11 @@ void Schema::ReadSchema(Reader& type_reader, size_t col_count_) {
     std::vector<std::string> res;
     size_t i = 0;
     while(i < col_count_ && type_reader.ReadLine(res)) {
+        if (res.size() == 3 && res[2].empty()) {
+            res.pop_back();
+        }
         if (res.size() != 2) {
             throw std::runtime_error("bad schema was given");
-            exit(0);
         }
         names.push_back(std::move(res[0]));
         types.push_back(ValidateType(res[1]));
@@ -31,10 +32,10 @@ void Schema::ReadSchema(Reader& type_reader, size_t col_count_) {
 }
 
 Type Schema::ValidateType(const std::string& type) {
-    if (type == "int64") {
+    if (type == "int16" || type == "int32" || type == "int64") {
         return Type::int64;
     }
-    if (type == "string") {
+    if (type == "string" || type == "DATE" || type == "TIMESTAMP") {
         return Type::str;
     }
     throw std::runtime_error("not existing type was given");

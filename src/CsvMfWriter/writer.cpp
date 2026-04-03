@@ -18,7 +18,9 @@ void Writer::WriteElem(int64_t x, bool fl) {
 
 void Writer::WriteElem(const std::string& s, bool fl) {
     if (s.find(delimetr_) == std::string::npos &&
-    s.find('"') == std::string::npos) {
+    s.find('"') == std::string::npos &&
+    s.find('\n') == std::string::npos &&
+    s.find('\r') == std::string::npos) {
         out_ << s;
         CheckFlag(fl);
         return;

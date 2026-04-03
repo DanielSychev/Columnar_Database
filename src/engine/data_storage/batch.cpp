@@ -13,7 +13,9 @@ Batch::Batch(Schema& schema, size_t batch_rows_count) : schema(schema), batch_ro
             columns[i] = std::make_shared<StrColumn>();
             break;
         default:
-            throw std::runtime_error("bad column type was given");
+            columns[i] = std::make_shared<StrColumn>();
+            break;
+            // throw std::runtime_error("bad column type was given");
         }
     }
 }
