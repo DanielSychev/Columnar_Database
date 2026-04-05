@@ -2,6 +2,7 @@
 
 #include <string>
 #include <ostream>
+#include <string_view>
 #include <vector>
 
 namespace concepts_write {
@@ -15,9 +16,9 @@ namespace concepts_write {
 class Writer {
 public:
     // Writer(const std::string& file_path, char delimetr = ',');
-    Writer(std::ostream& ss, char delimetr = ',');
+    explicit Writer(std::ostream& ss, char delimetr = ',');
     void WriteElem(int64_t x, bool);
-    void WriteElem(const std::string& s, bool); // флаг bool = true, если ставим '\n'
+    void WriteElem(std::string_view s, bool); // флаг bool = true, если ставим '\n'
     size_t TellPos();
 
     template<concepts_write::BinarySerializable T>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 #include <vector>
 #include "CsvMfReader/reader.h"
 #include "CsvMfWriter/writer.h"
@@ -11,14 +12,14 @@ enum class Type {
     int64, str
 };
 
-std::string TypeToString(const Type& t);
+std::string_view TypeToString(Type t);
 
 struct Schema {
     Schema();
     void ReadSchema(Reader& type_reader, size_t col_count_ = max_col_count); // any format
-    Type ValidateType(const std::string& type);
-    size_t NumColums();
-    void PrintSchema(Writer& writer);
+    static Type ValidateType(std::string_view type);
+    size_t NumColums() const;
+    void PrintSchema(Writer& writer) const;
 
     std::vector<std::string> names;
     std::vector<Type> types;

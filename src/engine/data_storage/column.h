@@ -1,8 +1,6 @@
 #pragma once
 
 #include "engine/data_storage/schema.h"
-#include <functional>
-#include <stdexcept>
 #include <vector>
 #include "CsvMfWriter/writer.h"
 
@@ -19,9 +17,6 @@ public:
     virtual void PrintElem(Writer&, size_t, bool) const = 0;
     virtual size_t Size() const = 0;
     virtual ~Column() = default;
-
-    Type column_type;
-private:
 };
 
 class Int64Column : public Column {

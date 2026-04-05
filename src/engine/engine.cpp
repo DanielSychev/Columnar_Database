@@ -9,14 +9,12 @@ Engine::Engine(std::ifstream& data_reader_stream, std::ofstream& data_writer_str
 data_reader(data_reader_stream), data_writer(data_writer_stream), type_reader(EMPTY_INPUT_STREAM), type_writer(schema_writer_stream) {}
 
 
-void Engine::CsvToMfBatchProcessor(Schema& schema) {
-    int i = 0;
+void Engine::CsvToMfBatchProcessor(const Schema& schema) {
     while (true) {
         Batch batch(schema, batch_rows_count);
         if (!batch_serialization::ReadCsvBatch(data_reader, batch)) {
             break;
         }
-        // std::cout << "batch " << i++ << " was read" << std::endl;
         batch_positions.push_back(data_writer.TellPos());
         batch_serialization::WriteMfBatch(batch, data_writer);
     }
@@ -43,7 +41,7 @@ void Engine::CsvToMfProcessor() {
     data_writer.BinaryWrite(pos); // пишем метку в конце, откуда надо читать мету
 }
 
-void Engine::MfToCsvBatchProcessor(Schema& schema) {
+void Engine::MfToCsvBatchProcessor(const Schema& schema) {
     size_t batch_count; // читаем позиции батчей
     data_reader.BinaryRead(batch_count);
     batch_positions.resize(batch_count);

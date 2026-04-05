@@ -20,22 +20,26 @@ bool ReadCsvBatch(Reader& reader, Batch& batch) {
 
 bool ReadMfBatch(Reader& reader, Batch& batch) {
     for (size_t i = 0; i < batch.ColumnsCount(); ++i) {
-        batch.ColumnAt(i).Read(reader);
-        batch.SetRowsCount(batch.ColumnAt(i).Size());
+        Column& column = batch.ColumnAt(i);
+        column.Read(reader);
+        batch.SetRowsCount(column.Size());
     }
     return !batch.Empty();
 }
 
 void WriteMfBatch(const Batch& batch, Writer& writer) {
-    for (size_t i = 0; i < batch.ColumnsCount(); ++i) {
+    size_t columns_count = batch.ColumnsCount();
+    for (size_t i = 0; i < columns_count; ++i) {
         batch.ColumnAt(i).Print(writer);
     }
 }
 
 void WriteCsvBatch(const Batch& batch, Writer& writer) {
-    for (size_t row_index = 0; row_index < batch.RowsCount(); ++row_index) {
-        for (size_t column_index = 0; column_index < batch.ColumnsCount(); ++column_index) {
-            batch.ColumnAt(column_index).PrintElem(writer, row_index, column_index == batch.ColumnsCount() - 1);
+    size_t rows_count = batch.RowsCount();
+    size_t columns_count = batch.ColumnsCount();
+    for (size_t row_index = 0; row_index < rows_count; ++row_index) {
+        for (size_t column_index = 0; column_index < columns_count; ++column_index) {
+            batch.ColumnAt(column_index).PrintElem(writer, row_index, column_index == columns_count - 1);
         }
     }
 }

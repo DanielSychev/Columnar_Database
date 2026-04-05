@@ -14,7 +14,7 @@ namespace concepts_read {
 
 class Reader {
 public:
-    Reader(std::istream& ss, char delimetr = ',');
+    explicit Reader(std::istream& ss, char delimetr = ',');
 
     bool ReadLine(std::vector<std::string>& result);
 

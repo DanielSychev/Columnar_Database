@@ -1,14 +1,14 @@
 #include <CsvMfWriter/writer.h>
 
 namespace {
-bool NeedsEscaping(const std::string& s, char delimiter) {
+bool NeedsEscaping(std::string_view s, char delimiter) {
     return s.find(delimiter) != std::string::npos ||
         s.find('"') != std::string::npos ||
         s.find('\n') != std::string::npos ||
         s.find('\r') != std::string::npos;
 }
 
-std::string EscapeField(const std::string& s) {
+std::string EscapeField(std::string_view s) {
     size_t quote_count = 0;
     for (char c : s) {
         if (c == '"') {
@@ -44,7 +44,7 @@ void Writer::WriteElem(int64_t x, bool fl) {
     CheckFlag(fl);
 }
 
-void Writer::WriteElem(const std::string& s, bool fl) {
+void Writer::WriteElem(std::string_view s, bool fl) {
     if (!NeedsEscaping(s, delimetr_)) {
         out_.write(s.data(), static_cast<std::streamsize>(s.size()));
         CheckFlag(fl);

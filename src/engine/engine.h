@@ -14,8 +14,8 @@ public:
     void CsvToMfProcessor();
     void MfToCsvProcessor();
 private:
-    void CsvToMfBatchProcessor(Schema& schema);
-    void MfToCsvBatchProcessor(Schema& schema);
+    void CsvToMfBatchProcessor(const Schema& schema);
+    void MfToCsvBatchProcessor(const Schema& schema);
     Reader data_reader;
     Writer data_writer;
     Reader type_reader;

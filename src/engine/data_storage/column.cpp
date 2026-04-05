@@ -3,8 +3,9 @@
 
 template <typename T>
 void PrintVisitor(Writer& w, const std::vector<T>& v) {
-    for (size_t i = 0; i < v.size(); ++i) {
-        w.WriteElem(v[i], i == v.size() - 1);
+    size_t size = v.size();
+    for (size_t i = 0; i < size; ++i) {
+        w.WriteElem(v[i], i == size - 1);
     }
 }
 

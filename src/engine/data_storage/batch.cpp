@@ -16,7 +16,7 @@ std::shared_ptr<Column> CreateColumn(Type type) {
 }
 }
 
-Batch::Batch(Schema& schema, size_t batch_rows_count) : batch_rows_count(batch_rows_count) {
+Batch::Batch(const Schema& schema, size_t batch_rows_count) : batch_rows_count(batch_rows_count) {
     columns.resize(schema.NumColums());
     for (size_t i = 0; i < columns.size(); ++i) {
         columns[i] = CreateColumn(schema.types[i]);
