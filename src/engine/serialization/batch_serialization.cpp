@@ -19,16 +19,9 @@ bool ReadCsvBatch(Reader& reader, Batch& batch) {
 }
 
 bool ReadMfBatch(Reader& reader, Batch& batch) {
-    std::vector<std::vector<std::string>> mfcolumns(batch.ColumnsCount());
-    if (!reader.ReadRows(mfcolumns, batch.ColumnsCount())) {
-        return false;
-    }
-
-    for (size_t i = 0; i < mfcolumns.size(); ++i) {
-        if (mfcolumns[i].empty()) {
-            throw std::runtime_error("wrong batch format");
-        }
-        batch.AddColumn(i, std::move(mfcolumns[i]));
+    for (size_t i = 0; i < batch.ColumnsCount(); ++i) {
+        batch.ColumnAt(i).Read(reader);
+        batch.SetRowsCount(batch.ColumnAt(i).Size());
     }
     return !batch.Empty();
 }

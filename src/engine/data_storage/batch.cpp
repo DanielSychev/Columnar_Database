@@ -47,15 +47,18 @@ void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
         throw std::runtime_error("wrong batch format");
     }
 
-    if (rows_count == 0) {
-        rows_count = values.size();
-    } else if (values.size() != rows_count) {
-        throw std::runtime_error("wrong batch format");
-    }
+    SetRowsCount(values.size());
 
     for (auto& value : values) {
         columns[column_index]->AddElem(std::move(value));
     }
+}
+
+Column& Batch::ColumnAt(size_t column_index) {
+    if (column_index >= columns.size()) {
+        throw std::runtime_error("wrong column index");
+    }
+    return *columns[column_index];
 }
 
 const Column& Batch::ColumnAt(size_t column_index) const {
@@ -63,6 +66,19 @@ const Column& Batch::ColumnAt(size_t column_index) const {
         throw std::runtime_error("wrong column index");
     }
     return *columns[column_index];
+}
+
+void Batch::SetRowsCount(size_t row_count) {
+    if (row_count > batch_rows_count) {
+        throw std::runtime_error("wrong batch format");
+    }
+    if (rows_count == 0) {
+        rows_count = row_count;
+        return;
+    }
+    if (rows_count != row_count) {
+        throw std::runtime_error("wrong batch format");
+    }
 }
 
 size_t Batch::RowsCount() const {

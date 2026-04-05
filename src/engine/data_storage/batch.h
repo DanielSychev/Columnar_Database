@@ -11,7 +11,9 @@ public:
     Batch(Schema& schema, size_t batch_rows_count);
     void AddRow(std::vector<std::string>&& row);
     void AddColumn(size_t column_index, std::vector<std::string>&& values);
+    Column& ColumnAt(size_t column_index);
     const Column& ColumnAt(size_t column_index) const;
+    void SetRowsCount(size_t row_count);
     size_t RowsCount() const;
     size_t ColumnsCount() const;
     size_t MaxRowsCount() const;

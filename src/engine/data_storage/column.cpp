@@ -1,4 +1,5 @@
 #include "engine/data_storage/column.h"
+#include <stdexcept>
 
 template <typename T>
 void PrintVisitor(Writer& w, const std::vector<T>& v) {
@@ -20,7 +21,11 @@ void Int64Column::AddElem(std::string&& s) {
 }
 
 void Int64Column::Print(Writer& w) const {
-    PrintVisitor(w, data);
+    w.BinaryWriteVector(data);
+}
+
+void Int64Column::Read(Reader& r) {
+    r.BinaryReadVector(data);
 }
 
 void Int64Column::PrintElem(Writer& w, size_t i, bool b) const {
@@ -37,6 +42,12 @@ void StrColumn::AddElem(std::string&& s) {
 
 void StrColumn::Print(Writer& w) const {
     PrintVisitor(w, data);
+}
+
+void StrColumn::Read(Reader& r) {
+    if (!r.ReadLine(data)) {
+        throw std::runtime_error("wrong batch format");
+    }
 }
 
 void StrColumn::PrintElem(Writer& w, size_t i, bool b) const {

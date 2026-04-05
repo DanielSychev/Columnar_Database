@@ -110,3 +110,16 @@ TEST(CSV_Reader, BinaryReadUInt32) {
     a.BinaryRead(value);
     EXPECT_EQ(number, value);
 }
+
+TEST(CSV_Reader, BinaryReadVectorInt64) {
+    std::stringstream s;
+    Reader a(s);
+    std::vector<int64_t> numbers = {1, -2, 300, 4000};
+    size_t count = numbers.size();
+    s.write(reinterpret_cast<const char*>(&count), sizeof(size_t));
+    s.write(reinterpret_cast<const char*>(numbers.data()), static_cast<std::streamsize>(numbers.size() * sizeof(int64_t)));
+
+    std::vector<int64_t> values;
+    a.BinaryReadVector(values);
+    EXPECT_EQ(values, numbers);
+}

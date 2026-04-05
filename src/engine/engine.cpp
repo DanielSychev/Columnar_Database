@@ -16,7 +16,7 @@ void Engine::CsvToMfBatchProcessor(Schema& schema) {
         if (!batch_serialization::ReadCsvBatch(data_reader, batch)) {
             break;
         }
-        std::cout << "batch " << i++ << " was read" << std::endl;
+        // std::cout << "batch " << i++ << " was read" << std::endl;
         batch_positions.push_back(data_writer.TellPos());
         batch_serialization::WriteMfBatch(batch, data_writer);
     }
