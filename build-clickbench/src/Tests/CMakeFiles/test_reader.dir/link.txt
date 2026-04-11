@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/c++  -Wall -Wextra -Wno-unused-variable -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/test_reader.dir/TestReader.cpp.o -o test_reader  ../CsvMfReader/libreader.a /opt/homebrew/lib/libgtest_main.a /opt/homebrew/lib/libgtest.a

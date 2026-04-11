@@ -12,7 +12,7 @@ Schema MakeTestSchema() {
     Schema schema;
     schema.names = {"id", "name"};
     schema.types = {Type::int64, Type::str};
-    schema.col_count = schema.names.size();
+    schema.column_count = schema.names.size();
     return schema;
 }
 }

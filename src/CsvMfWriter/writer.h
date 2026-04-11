@@ -1,17 +1,8 @@
 #pragma once
 
-#include <string>
 #include <ostream>
 #include <string_view>
-#include <vector>
-
-namespace concepts_write {
-    template<typename T>
-    concept BinarySerializable = 
-        std::is_integral_v<T> || 
-        std::is_same_v<T, float> || 
-        std::is_same_v<T, double>;
-};
+#include <utils.h>
 
 class Writer {
 public:
@@ -21,12 +12,12 @@ public:
     void WriteElem(std::string_view s, bool); // флаг bool = true, если ставим '\n'
     size_t TellPos();
 
-    template<concepts_write::BinarySerializable T>
+    template<concepts::BinarySerializable T>
     void BinaryWrite(const T& value) {
         out_.write(reinterpret_cast<const char*>(&value), sizeof(T));
     }
 
-    template<concepts_write::BinarySerializable T>
+    template<concepts::BinarySerializable T>
     void BinaryWriteVector(const std::vector<T>& values) {
         const size_t count = values.size();
         BinaryWrite(count);

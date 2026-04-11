@@ -15,3 +15,7 @@ add_executable(test_batch_serialization
 )
 target_link_libraries(test_batch_serialization reader writer GTest::gtest_main)
 target_include_directories(test_batch_serialization PUBLIC ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(test_scan_executor TestScanExecutor.cpp)
+target_link_libraries(test_scan_executor executor reader writer GTest::gtest_main)
+target_include_directories(test_scan_executor PUBLIC ${CMAKE_SOURCE_DIR}/src)

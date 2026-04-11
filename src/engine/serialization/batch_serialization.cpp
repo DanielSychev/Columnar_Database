@@ -27,11 +27,19 @@ bool ReadMfBatch(Reader& reader, Batch& batch) {
     return !batch.Empty();
 }
 
-void WriteMfBatch(const Batch& batch, Writer& writer) {
+size_t WriteMfBatch(const Batch& batch, Writer& writer) {
     size_t columns_count = batch.ColumnsCount();
+    std::vector<size_t> column_starts(columns_count);
     for (size_t i = 0; i < columns_count; ++i) {
+        column_starts[i] = writer.TellPos();
         batch.ColumnAt(i).Print(writer);
     }
+    // writing batch meta
+    size_t meta_pos = writer.TellPos();
+    for (size_t i = 0; i < columns_count; ++i) {
+        writer.BinaryWrite(column_starts[i]);
+    }
+    return meta_pos;
 }
 
 void WriteCsvBatch(const Batch& batch, Writer& writer) {

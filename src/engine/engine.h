@@ -1,4 +1,5 @@
 #include <fstream>
+// #include <utils.h>
 #include "CsvMfReader/reader.h"
 #include "CsvMfWriter/writer.h"
 #include <engine/data_storage/schema.h>
@@ -20,6 +21,6 @@ private:
     Writer data_writer;
     Reader type_reader;
     Writer type_writer;
-    const size_t batch_rows_count = 1000;
-    std::vector<size_t> batch_positions;
+    const size_t batch_rows_count = Constants::BATCH_SIZE;
+    std::vector<size_t> batch_meta_positions;
 };

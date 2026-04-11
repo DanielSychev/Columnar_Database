@@ -10,3 +10,4 @@ include(cmake/dependencies_package.cmake)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-variable")
 
 add_subdirectory(src)
+add_subdirectory(clickbench)
