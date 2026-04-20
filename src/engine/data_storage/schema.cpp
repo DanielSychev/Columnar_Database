@@ -13,6 +13,14 @@ std::string_view TypeToString(Type t) {
             return "int64";
         case Type::str:
             return "string";
+        case Type::int32:
+            return "int32";
+        case Type::int16:
+            return "int16";
+        case Type::int8:
+            return "int8";
+        case Type::double_:
+            return "double";
         default:
             return "another type";
     }
@@ -64,7 +72,7 @@ void Schema::AddColumn(const std::string& name, Type type) {
     ++column_count;
 }
 
-std::optional<std::pair<Type, size_t>> Schema::GetTypeAndPos(const std::string& name) {
+std::optional<std::pair<Type, size_t>> Schema::GetTypeAndPos(const std::string& name) const {
     for (size_t i = 0; i < column_count; ++i) {
         if (names[i] == name) {
             return std::make_pair(types[i], i);

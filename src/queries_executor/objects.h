@@ -1,4 +1,6 @@
 // #include <utils.h>
+#pragma once
+
 #include "engine/data_storage/batch.h"
 #include <memory>
 

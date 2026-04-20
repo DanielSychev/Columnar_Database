@@ -1,12 +1,13 @@
 #pragma once
 
 #include "CsvMfReader/reader.h"
+#include "queries_executor/aggregation.h"
 #include <istream>
 #include <memory>
 
 enum class OperatorType {
     SCAN,
-    COUNT,
+    // COUNT,
     FILTER,
     PROJECTION,
     JOIN,
@@ -30,7 +31,20 @@ struct ScanOperator : public Operator {
     std::vector<std::string> column_names;
 };
 
-struct CountOperator : public Operator {
-    CountOperator(std::shared_ptr<Operator> child_op);
-    virtual ~CountOperator() = default;
+// struct CountOperator : public Operator {
+//     CountOperator(std::shared_ptr<Operator> child_op);
+//     virtual ~CountOperator() = default;
+// };
+
+struct FilterOperator : public Operator {
+    FilterOperator(std::shared_ptr<Operator> child_op, const std::string& column_name_, std::string&& value_);
+    virtual ~FilterOperator() = default;
+    std::string column_name;
+    std::string value;
+};
+
+struct AggregateOperator : public Operator {
+    AggregateOperator(std::shared_ptr<Operator> child_op, std::vector<std::shared_ptr<Aggregation>> aggregations);
+    virtual ~AggregateOperator() = default;
+    std::vector<std::shared_ptr<Aggregation>> aggs;
 };

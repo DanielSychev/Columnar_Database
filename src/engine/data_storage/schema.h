@@ -8,7 +8,7 @@
 #include "CsvMfWriter/writer.h"
 
 enum class Type {
-    int64, str
+    int64, int32, int16, int8, double_, str
 };
 
 std::string_view TypeToString(Type t);
@@ -21,7 +21,7 @@ struct Schema {
     size_t NumColums() const;
     void PrintSchema(Writer& writer) const;
     void AddColumn(const std::string& name, Type type);
-    std::optional<std::pair<Type, size_t>> GetTypeAndPos(const std::string& name);
+    std::optional<std::pair<Type, size_t>> GetTypeAndPos(const std::string& name) const;
 
     std::vector<std::string> names;
     std::vector<Type> types;

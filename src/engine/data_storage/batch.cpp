@@ -1,4 +1,5 @@
 #include "engine/data_storage/batch.h"
+#include "engine/data_storage/schema.h"
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
@@ -8,6 +9,14 @@ std::shared_ptr<Column> CreateColumn(Type type) {
     switch (type) {
     case Type::int64:
         return std::make_shared<Int64Column>();
+    case Type::int32:
+        return std::make_shared<Int32Column>();
+    case Type::int16:
+        return std::make_shared<Int16Column>();
+    case Type::int8:
+        return std::make_shared<Int8Column>();
+    case Type::double_:
+        return std::make_shared<DoubleColumn>();
     case Type::str:
         return std::make_shared<StrColumn>();
     default:
@@ -16,14 +25,21 @@ std::shared_ptr<Column> CreateColumn(Type type) {
 }
 }
 
-Batch::Batch(const Schema& schema, size_t batch_rows_count) : batch_rows_count(batch_rows_count) {
+Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), batch_rows_count(batch_rows_count) {
+    has_schema = true;
     columns.resize(schema.NumColums());
     for (size_t i = 0; i < columns.size(); ++i) {
-        columns[i] = CreateColumn(schema.types[i]);
+        columns[i] = CreateColumn(this->schema.types[i]);
     }
 }
 
+Batch::Batch(size_t batch_rows_count) : batch_rows_count(batch_rows_count) {
+}
+
 void Batch::AddRow(std::vector<std::string>&& row) {
+    if (!has_schema) {
+        throw std::runtime_error("cannot add rows to batch without schema");
+    }
     if (row.size() != columns.size()) {
         throw std::runtime_error("wrong schema formart / wrong row lenght");
     }
@@ -37,6 +53,9 @@ void Batch::AddRow(std::vector<std::string>&& row) {
 }
 
 void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
+    if (!has_schema) {
+        throw std::runtime_error("cannot add indexed column to batch without schema");
+    }
     if (column_index >= columns.size()) {
         throw std::runtime_error("wrong column index");
     }
@@ -54,6 +73,36 @@ void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
     }
 }
 
+void Batch::AddColumn(size_t column_index, std::shared_ptr<Column> column) {
+    if (!has_schema) {
+        throw std::runtime_error("cannot add indexed column to batch without schema");
+    }
+    if (column_index >= columns.size()) {
+        throw std::runtime_error("wrong column index");
+    }
+    if (!column) {
+        throw std::runtime_error("column is null");
+    }
+    if (columns[column_index]->Size() != 0) {
+        throw std::runtime_error("column is already filled");
+    }
+
+    SetRowsCount(column->Size());
+    columns[column_index] = std::move(column);
+}
+
+void Batch::AddColumn(std::shared_ptr<Column> column) {
+    if (has_schema) {
+        throw std::runtime_error("cannot append column to batch with schema");
+    }
+    if (!column) {
+        throw std::runtime_error("column is null");
+    }
+
+    SetRowsCount(column->Size());
+    columns.push_back(std::move(column));
+}
+
 Column& Batch::ColumnAt(size_t column_index) {
     if (column_index >= columns.size()) {
         throw std::runtime_error("wrong column index");
@@ -66,6 +115,17 @@ const Column& Batch::ColumnAt(size_t column_index) const {
         throw std::runtime_error("wrong column index");
     }
     return *columns[column_index];
+}
+
+const Schema& Batch::GetSchema() const {
+    if (!has_schema) {
+        throw std::runtime_error("batch has no schema");
+    }
+    return schema;
+}
+
+bool Batch::HasSchema() const {
+    return has_schema;
 }
 
 void Batch::SetRowsCount(size_t row_count) {

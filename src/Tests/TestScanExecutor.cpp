@@ -53,3 +53,26 @@ TEST(ScanExecutor, ReadsRequestedColumnsByNameAndOrder) {
     EXPECT_EQ(csv_output.str(), "10,1\n20,2\n");
     EXPECT_EQ(executor->NextBatch(), nullptr);
 }
+
+TEST(FilterExecutor, CopiesColumnsSkippingBannedRows) {
+    std::stringstream mf_stream = BuildMfStreamWithSingleBatch();
+
+    auto scan = std::make_shared<ScanOperator>(
+        mf_stream,
+        std::vector<std::string>{"id", "score"}
+    );
+    auto filter = std::make_shared<FilterOperator>(scan, "score", std::string("20"));
+    auto executor = ExecuteOperator(filter);
+
+    auto batch = executor->NextBatch();
+    ASSERT_NE(batch, nullptr);
+    EXPECT_EQ(batch->RowsCount(), 1);
+    EXPECT_EQ(batch->ColumnsCount(), 2);
+
+    std::stringstream csv_output;
+    Writer csv_writer(csv_output);
+    batch_serialization::WriteCsvBatch(*batch, csv_writer);
+
+    EXPECT_EQ(csv_output.str(), "2,20\n");
+    EXPECT_EQ(executor->NextBatch(), nullptr);
+}

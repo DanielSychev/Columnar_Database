@@ -17,29 +17,12 @@ void PrintElemVisitor(Writer& w, const std::vector<T>& v, size_t i, bool b) {
     w.WriteElem(v[i], b);
 }
 
-void Int64Column::AddElem(std::string&& s) {
-    data.push_back(std::stoll(s)); // stoll сам делает throw в случае чего
-}
-
-void Int64Column::Print(Writer& w) const {
-    w.BinaryWriteVector(data);
-}
-
-void Int64Column::Read(Reader& r) {
-    r.BinaryReadVector(data);
-}
-
-void Int64Column::PrintElem(Writer& w, size_t i, bool b) const {
-    PrintElemVisitor(w, data, i, b);
-}
-
-size_t Int64Column::Size() const {
-    return data.size();
-}
-
 void StrColumn::AddElem(std::string&& s) {
     data.push_back(std::move(s));
 }
+
+StrColumn::StrColumn(const StrColumn& other, const std::vector<bool>& banned) :
+data(column_detail::CopyAllowedValues(other.data, banned)) {}
 
 void StrColumn::Print(Writer& w) const {
     PrintVisitor(w, data);
@@ -55,6 +38,18 @@ void StrColumn::PrintElem(Writer& w, size_t i, bool b) const {
     PrintElemVisitor(w, data, i, b);
 }
 
+void StrColumn::Accept(ColumnVisitor& visitor) const {
+    visitor.Visit(*this);
+}
+
 size_t StrColumn::Size() const {
     return data.size();
+}
+
+bool StrColumn::Compare(const std::string& elem, size_t i) const {
+    return data[i] == elem;
+}
+
+std::shared_ptr<Column> StrColumn::CopyFiltered(const std::vector<bool>& banned) const {
+    return std::make_shared<StrColumn>(*this, banned);
 }
