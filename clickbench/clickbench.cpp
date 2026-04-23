@@ -44,13 +44,51 @@ std::shared_ptr<Operator> MakeQuery3() {
     return std::make_shared<AggregateOperator>(scanner, aggregations);
 }
 
+// SELECT AVG(UserID) FROM hits;
+std::shared_ptr<Operator> MakeQuery4() {
+    std::vector<std::string> columns = {"UserID"};
+    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<AvgAggregation>("UserID")};
+    return std::make_shared<AggregateOperator>(scanner, aggregations);
+}
+
+// SELECT COUNT(DISTINCT UserID) FROM hits;
+std::shared_ptr<Operator> MakeQuery5() {
+    std::vector<std::string> columns = {"UserID"};
+    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountDistinctAggregation>("UserID")};
+    return std::make_shared<AggregateOperator>(scanner, aggregations);
+}
+
+// SELECT COUNT(DISTINCT SearchPhrase) FROM hits;
+std::shared_ptr<Operator> MakeQuery6() {
+    std::vector<std::string> columns = {"SearchPhrase"};
+    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountDistinctAggregation>("SearchPhrase")};
+    return std::make_shared<AggregateOperator>(scanner, aggregations);
+}
+
+// SELECT MIN(EventDate), MAX(EventDate) FROM hits;
+std::shared_ptr<Operator> MakeQuery7() {
+    std::vector<std::string> columns = {"EventDate"};
+    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<MinAggregation>("EventDate"), std::make_shared<MaxAggregation>("EventDate")};
+    return std::make_shared<AggregateOperator>(scanner, aggregations);
+}
+
+
 int main() {
     MakeScanOperator();
     std::shared_ptr<Operator> queries[43];
     queries[0] = MakeQuery1();
     queries[1] = MakeQuery2();
     queries[2] = MakeQuery3();
-    for (int i = 0; i < 3; ++i) {
+    queries[3] = MakeQuery4();
+    queries[4] = MakeQuery5();
+    queries[5] = MakeQuery6();
+    queries[6] = MakeQuery7();
+
+    for (int i = 0; i < 7; ++i) {
         auto executor = ExecuteOperator(queries[i]);
         std::ofstream result_stream("//Users//mac//Columnar_Database//src//TestFiles//result"+std::to_string(i)+".csv");
         Writer result_writer(result_stream);

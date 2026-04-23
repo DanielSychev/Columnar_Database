@@ -38,6 +38,13 @@ void StrColumn::PrintElem(Writer& w, size_t i, bool b) const {
     PrintElemVisitor(w, data, i, b);
 }
 
+std::string StrColumn::GetElemToString(size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in GetElemToString");
+    }
+    return data[index];
+}
+
 void StrColumn::Accept(ColumnVisitor& visitor) const {
     visitor.Visit(*this);
 }
@@ -52,4 +59,16 @@ bool StrColumn::Compare(const std::string& elem, size_t i) const {
 
 std::shared_ptr<Column> StrColumn::CopyFiltered(const std::vector<bool>& banned) const {
     return std::make_shared<StrColumn>(*this, banned);
+}
+
+const std::vector<std::string>& StrColumn::Data() const {
+    return data;
+}
+
+void TimeStampColumn::Accept(ColumnVisitor& visitor) const {
+    visitor.Visit(*this);
+}
+
+void DateColumn::Accept(ColumnVisitor& visitor) const {
+    visitor.Visit(*this);
 }

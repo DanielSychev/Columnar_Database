@@ -19,6 +19,10 @@ std::shared_ptr<Column> CreateColumn(Type type) {
         return std::make_shared<DoubleColumn>();
     case Type::str:
         return std::make_shared<StrColumn>();
+    case Type::date:
+        return std::make_shared<DateColumn>();
+    case Type::timestamp:
+        return std::make_shared<TimeStampColumn>();
     default:
         return std::make_shared<StrColumn>();
     }

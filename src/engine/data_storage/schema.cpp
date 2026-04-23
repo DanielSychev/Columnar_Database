@@ -21,6 +21,10 @@ std::string_view TypeToString(Type t) {
             return "int8";
         case Type::double_:
             return "double";
+        case Type::date:
+            return "DATE";
+        case Type::timestamp:
+            return "TIMESTAMP";
         default:
             return "another type";
     }
@@ -49,8 +53,14 @@ Type Schema::ValidateType(std::string_view type) {
     if (type == "int16" || type == "int32" || type == "int64") {
         return Type::int64;
     }
-    if (type == "string" || type == "DATE" || type == "TIMESTAMP") {
+    if (type == "string") {
         return Type::str;
+    }
+    if (type == "DATE") {
+        return Type::date;
+    }
+    if (type == "TIMESTAMP") {
+        return Type::timestamp;
     }
     throw std::runtime_error("not existing type was given");
 }

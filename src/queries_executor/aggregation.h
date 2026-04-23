@@ -2,9 +2,11 @@
 
 #include "engine/data_storage/batch.h"
 #include "engine/data_storage/column.h"
-#include "engine/data_storage/visitors/sum_visitor.h"
+#include "engine/data_storage/visitors/numeric_visitor.h"
+#include "engine/data_storage/visitors/date_visitor.h"
 #include <memory>
 #include <optional>
+#include <unordered_set>
 // #include <queries_executor/operator.h>
 
 struct Aggregation {
@@ -28,7 +30,7 @@ struct SumAggregation : public Aggregation {
     virtual ~SumAggregation() = default;
 
     std::string column_name;
-    SumVisitor visitor;
+    NumericFuncVisitor visitor;
     std::optional<Type> input_type;
 };
 
@@ -39,11 +41,40 @@ struct AvgAggregation : public Aggregation {
     virtual ~AvgAggregation() = default;
 
     std::string column_name;
-    SumVisitor visitor;
+    NumericFuncVisitor visitor;
     std::optional<Type> input_type;
 };
 
+struct CountDistinctAggregation : public Aggregation {
+    CountDistinctAggregation(const std::string col_name);
+    void RunBatch(std::shared_ptr<Batch>) override;
+    std::shared_ptr<Column> GetResult() const override;
+    virtual ~CountDistinctAggregation() = default;
 
-// struct AvgAggregation : public Aggregation {
+    std::string column_name;
+    std::unordered_set<std::string> distinct_values;
+};
 
-// };
+struct MaxAggregation : public Aggregation {
+    MaxAggregation(const std::string col_name);
+    void RunBatch(std::shared_ptr<Batch>) override;
+    std::shared_ptr<Column> GetResult() const override;
+    virtual ~MaxAggregation() = default;
+
+    std::string column_name;
+    NumericFuncVisitor numeric_visitor;
+    DateMinMaxVisitor date_visitor;
+    std::optional<Type> input_type;
+};
+
+struct MinAggregation : public Aggregation {
+    MinAggregation(const std::string col_name);
+    void RunBatch(std::shared_ptr<Batch>) override;
+    std::shared_ptr<Column> GetResult() const override;
+    virtual ~MinAggregation() = default;
+
+    std::string column_name;
+    NumericFuncVisitor numeric_visitor;
+    DateMinMaxVisitor date_visitor;
+    std::optional<Type> input_type;
+};

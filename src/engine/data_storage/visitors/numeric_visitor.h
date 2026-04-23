@@ -8,7 +8,7 @@
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/visitors/visitor.h"
 
-struct SumVisitor : public ColumnVisitor {
+struct NumericFuncVisitor : public ColumnVisitor {
     template <typename ColumnT>
     void SumVisit(const ColumnT& column) {
         const auto& data = column.Data();
@@ -37,13 +37,23 @@ struct SumVisitor : public ColumnVisitor {
     void Visit(const Int16Column& col) override { SumVisit(col); }
     void Visit(const Int32Column& col) override { SumVisit(col); }
     void Visit(const Int64Column& col) override { SumVisit(col); }
+    void Visit(const Int128Column& col) override { SumVisit(col); }
     void Visit(const DoubleColumn& col) override { SumVisit(col); }
 
     void Visit(const StrColumn&) override {
-        throw std::runtime_error("SUM for string");
+        throw std::runtime_error("numeric function for string");
     }
 
-    int64_t IntegralSum() const {
+    void Visit(const DateColumn&) override {
+        throw std::runtime_error("numeric function for date");
+    }
+
+    void Visit(const TimeStampColumn&) override {
+        throw std::runtime_error("numeric function for timestamp");
+    }
+
+
+    __int128_t IntegralSum() const {
         return sum_i;
     }
 
@@ -51,18 +61,27 @@ struct SumVisitor : public ColumnVisitor {
         return sum_d;
     }
 
-    double Avg() const {
+    int64_t Avg() const {
         if (cnt == 0) {
             return 0; // or throw an exception
         }
-        return result_is_double ? sum_d / cnt : static_cast<double>(sum_i) / cnt;
+        // return result_is_double ? sum_d / cnt : static_cast<double>(sum_i) / cnt;
+        return sum_i / cnt;
+    }
+
+    int64_t Max() const {
+        return max_i;
+    }
+
+    int64_t Min() const {
+        return min_i;
     }
 
     // bool ResultIsDouble() const {
     //     return result_is_double;
     // }
 
-    int64_t sum_i = 0;
+    __int128_t sum_i = 0;
     int64_t max_i = std::numeric_limits<int64_t>::lowest();
     int64_t min_i = std::numeric_limits<int64_t>::max();
     double sum_d = 0;
