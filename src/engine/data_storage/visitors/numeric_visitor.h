@@ -41,15 +41,15 @@ struct NumericFuncVisitor : public ColumnVisitor {
     void Visit(const DoubleColumn& col) override { SumVisit(col); }
 
     void Visit(const StrColumn&) override {
-        throw std::runtime_error("numeric function for string");
+        throw std::runtime_error("numeric function for string (in numeric visitor)");
     }
 
     void Visit(const DateColumn&) override {
-        throw std::runtime_error("numeric function for date");
+        throw std::runtime_error("numeric function for date (in numeric visitor)");
     }
 
     void Visit(const TimeStampColumn&) override {
-        throw std::runtime_error("numeric function for timestamp");
+        throw std::runtime_error("numeric function for timestamp (in numeric visitor)");
     }
 
 

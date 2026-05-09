@@ -3,10 +3,13 @@
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 std::shared_ptr<Column> CreateColumn(Type type) {
     switch (type) {
+    case Type::int128:
+        return std::make_shared<Int128Column>();
     case Type::int64:
         return std::make_shared<Int64Column>();
     case Type::int32:
@@ -54,6 +57,18 @@ void Batch::AddRow(std::vector<std::string>&& row) {
         columns[i]->AddElem(std::move(row[i]));
     }
     ++rows_count;
+}
+
+std::vector<std::string> Batch::GetRow(size_t row_index) const {
+    if (row_index >= rows_count) {
+        throw std::runtime_error("wrong row index");
+    }
+    std::vector<std::string> row;
+    row.reserve(columns.size());
+    for (const auto& column: columns) {
+        row.push_back(column->GetElemToString(row_index));
+    }
+    return row;
 }
 
 void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
@@ -104,6 +119,19 @@ void Batch::AddColumn(std::shared_ptr<Column> column) {
     }
 
     SetRowsCount(column->Size());
+    columns.push_back(std::move(column));
+}
+
+void Batch::AppendColumn(const std::string& name, Type type, std::shared_ptr<Column> column) {
+    if (!has_schema) {
+        throw std::runtime_error("cannot append named column to batch without schema");
+    }
+    if (!column) {
+        throw std::runtime_error("column is null");
+    }
+
+    SetRowsCount(column->Size());
+    schema.AddColumn(name, type);
     columns.push_back(std::move(column));
 }
 

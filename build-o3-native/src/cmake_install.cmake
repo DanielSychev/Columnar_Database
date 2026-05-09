@@ -39,6 +39,16 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
+  include("/Users/mac/Columnar_Database/build-o3-native/src/CsvMfReader/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("/Users/mac/Columnar_Database/build-o3-native/src/CsvMfWriter/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
   include("/Users/mac/Columnar_Database/build-o3-native/src/engine/cmake_install.cmake")
 endif()
 
@@ -49,11 +59,6 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("/Users/mac/Columnar_Database/build-o3-native/src/CsvMfReader/cmake_install.cmake")
-endif()
-
-if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  # Include the install script for the subdirectory.
-  include("/Users/mac/Columnar_Database/build-o3-native/src/CsvMfWriter/cmake_install.cmake")
+  include("/Users/mac/Columnar_Database/build-o3-native/src/queries_executor/cmake_install.cmake")
 endif()
 

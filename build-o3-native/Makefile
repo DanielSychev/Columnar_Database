@@ -117,6 +117,32 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named reader
+
+# Build rule for target.
+reader: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 reader
+.PHONY : reader
+
+# fast build rule for target.
+reader/fast:
+	$(MAKE) $(MAKESILENT) -f src/CsvMfReader/CMakeFiles/reader.dir/build.make src/CsvMfReader/CMakeFiles/reader.dir/build
+.PHONY : reader/fast
+
+#=============================================================================
+# Target rules for targets named writer
+
+# Build rule for target.
+writer: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 writer
+.PHONY : writer
+
+# fast build rule for target.
+writer/fast:
+	$(MAKE) $(MAKESILENT) -f src/CsvMfWriter/CMakeFiles/writer.dir/build.make src/CsvMfWriter/CMakeFiles/writer.dir/build
+.PHONY : writer/fast
+
+#=============================================================================
 # Target rules for targets named engine
 
 # Build rule for target.
@@ -128,6 +154,19 @@ engine: cmake_check_build_system
 engine/fast:
 	$(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine.dir/build.make src/engine/CMakeFiles/engine.dir/build
 .PHONY : engine/fast
+
+#=============================================================================
+# Target rules for targets named engine_cli
+
+# Build rule for target.
+engine_cli: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 engine_cli
+.PHONY : engine_cli
+
+# fast build rule for target.
+engine_cli/fast:
+	$(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine_cli.dir/build.make src/engine/CMakeFiles/engine_cli.dir/build
+.PHONY : engine_cli/fast
 
 #=============================================================================
 # Target rules for targets named test_reader
@@ -169,30 +208,43 @@ test_batch_serialization/fast:
 .PHONY : test_batch_serialization/fast
 
 #=============================================================================
-# Target rules for targets named reader
+# Target rules for targets named test_scan_executor
 
 # Build rule for target.
-reader: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 reader
-.PHONY : reader
+test_scan_executor: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_scan_executor
+.PHONY : test_scan_executor
 
 # fast build rule for target.
-reader/fast:
-	$(MAKE) $(MAKESILENT) -f src/CsvMfReader/CMakeFiles/reader.dir/build.make src/CsvMfReader/CMakeFiles/reader.dir/build
-.PHONY : reader/fast
+test_scan_executor/fast:
+	$(MAKE) $(MAKESILENT) -f src/Tests/CMakeFiles/test_scan_executor.dir/build.make src/Tests/CMakeFiles/test_scan_executor.dir/build
+.PHONY : test_scan_executor/fast
 
 #=============================================================================
-# Target rules for targets named writer
+# Target rules for targets named executor
 
 # Build rule for target.
-writer: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 writer
-.PHONY : writer
+executor: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 executor
+.PHONY : executor
 
 # fast build rule for target.
-writer/fast:
-	$(MAKE) $(MAKESILENT) -f src/CsvMfWriter/CMakeFiles/writer.dir/build.make src/CsvMfWriter/CMakeFiles/writer.dir/build
-.PHONY : writer/fast
+executor/fast:
+	$(MAKE) $(MAKESILENT) -f src/queries_executor/CMakeFiles/executor.dir/build.make src/queries_executor/CMakeFiles/executor.dir/build
+.PHONY : executor/fast
+
+#=============================================================================
+# Target rules for targets named clickbench
+
+# Build rule for target.
+clickbench: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 clickbench
+.PHONY : clickbench
+
+# fast build rule for target.
+clickbench/fast:
+	$(MAKE) $(MAKESILENT) -f clickbench/CMakeFiles/clickbench.dir/build.make clickbench/CMakeFiles/clickbench.dir/build
+.PHONY : clickbench/fast
 
 # Help Target
 help:
@@ -202,10 +254,14 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... clickbench"
 	@echo "... engine"
+	@echo "... engine_cli"
+	@echo "... executor"
 	@echo "... reader"
 	@echo "... test_batch_serialization"
 	@echo "... test_reader"
+	@echo "... test_scan_executor"
 	@echo "... test_writer"
 	@echo "... writer"
 .PHONY : help

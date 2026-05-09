@@ -9,6 +9,8 @@ Schema::Schema(std::vector<std::string>&& names_, std::vector<Type>&& types_) : 
 
 std::string_view TypeToString(Type t) {
     switch (t) {
+        case Type::int128:
+            return "int128";
         case Type::int64:
             return "int64";
         case Type::str:
@@ -50,6 +52,9 @@ void Schema::ReadSchema(Reader& type_reader, size_t column_count_) {
 }
 
 Type Schema::ValidateType(std::string_view type) {
+    if (type == "int128") {
+        return Type::int128;
+    }
     if (type == "int16" || type == "int32" || type == "int64") {
         return Type::int64;
     }

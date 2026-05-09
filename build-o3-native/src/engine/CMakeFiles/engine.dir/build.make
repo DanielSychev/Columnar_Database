@@ -69,24 +69,10 @@ include src/engine/CMakeFiles/engine.dir/progress.make
 # Include the compile flags for this target's objects.
 include src/engine/CMakeFiles/engine.dir/flags.make
 
-src/engine/CMakeFiles/engine.dir/main.cpp.o: src/engine/CMakeFiles/engine.dir/flags.make
-src/engine/CMakeFiles/engine.dir/main.cpp.o: /Users/mac/Columnar_Database/src/engine/main.cpp
-src/engine/CMakeFiles/engine.dir/main.cpp.o: src/engine/CMakeFiles/engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object src/engine/CMakeFiles/engine.dir/main.cpp.o"
-	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && /Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/engine/CMakeFiles/engine.dir/main.cpp.o -MF CMakeFiles/engine.dir/main.cpp.o.d -o CMakeFiles/engine.dir/main.cpp.o -c /Users/mac/Columnar_Database/src/engine/main.cpp
-
-src/engine/CMakeFiles/engine.dir/main.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/engine.dir/main.cpp.i"
-	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && /Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mac/Columnar_Database/src/engine/main.cpp > CMakeFiles/engine.dir/main.cpp.i
-
-src/engine/CMakeFiles/engine.dir/main.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/engine.dir/main.cpp.s"
-	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && /Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mac/Columnar_Database/src/engine/main.cpp -o CMakeFiles/engine.dir/main.cpp.s
-
 src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o: src/engine/CMakeFiles/engine.dir/flags.make
 src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o: /Users/mac/Columnar_Database/src/engine/data_storage/schema.cpp
 src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o: src/engine/CMakeFiles/engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o"
 	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && /Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o -MF CMakeFiles/engine.dir/data_storage/schema.cpp.o.d -o CMakeFiles/engine.dir/data_storage/schema.cpp.o -c /Users/mac/Columnar_Database/src/engine/data_storage/schema.cpp
 
 src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.i: cmake_force
@@ -100,7 +86,7 @@ src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.s: cmake_force
 src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.o: src/engine/CMakeFiles/engine.dir/flags.make
 src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.o: /Users/mac/Columnar_Database/src/engine/data_storage/batch.cpp
 src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.o: src/engine/CMakeFiles/engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.o"
 	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && /Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.o -MF CMakeFiles/engine.dir/data_storage/batch.cpp.o.d -o CMakeFiles/engine.dir/data_storage/batch.cpp.o -c /Users/mac/Columnar_Database/src/engine/data_storage/batch.cpp
 
 src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.i: cmake_force
@@ -114,7 +100,7 @@ src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.s: cmake_force
 src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o: src/engine/CMakeFiles/engine.dir/flags.make
 src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o: /Users/mac/Columnar_Database/src/engine/data_storage/column.cpp
 src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o: src/engine/CMakeFiles/engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o"
 	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && /Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o -MF CMakeFiles/engine.dir/data_storage/column.cpp.o.d -o CMakeFiles/engine.dir/data_storage/column.cpp.o -c /Users/mac/Columnar_Database/src/engine/data_storage/column.cpp
 
 src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.i: cmake_force
@@ -128,7 +114,7 @@ src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.s: cmake_force
 src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o: src/engine/CMakeFiles/engine.dir/flags.make
 src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o: /Users/mac/Columnar_Database/src/engine/serialization/batch_serialization.cpp
 src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o: src/engine/CMakeFiles/engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o"
 	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && /Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o -MF CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o.d -o CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o -c /Users/mac/Columnar_Database/src/engine/serialization/batch_serialization.cpp
 
 src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.i: cmake_force
@@ -142,7 +128,7 @@ src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.s: cmake_
 src/engine/CMakeFiles/engine.dir/engine.cpp.o: src/engine/CMakeFiles/engine.dir/flags.make
 src/engine/CMakeFiles/engine.dir/engine.cpp.o: /Users/mac/Columnar_Database/src/engine/engine.cpp
 src/engine/CMakeFiles/engine.dir/engine.cpp.o: src/engine/CMakeFiles/engine.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object src/engine/CMakeFiles/engine.dir/engine.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/engine/CMakeFiles/engine.dir/engine.cpp.o"
 	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && /Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/engine/CMakeFiles/engine.dir/engine.cpp.o -MF CMakeFiles/engine.dir/engine.cpp.o.d -o CMakeFiles/engine.dir/engine.cpp.o -c /Users/mac/Columnar_Database/src/engine/engine.cpp
 
 src/engine/CMakeFiles/engine.dir/engine.cpp.i: cmake_force
@@ -155,7 +141,6 @@ src/engine/CMakeFiles/engine.dir/engine.cpp.s: cmake_force
 
 # Object files for target engine
 engine_OBJECTS = \
-"CMakeFiles/engine.dir/main.cpp.o" \
 "CMakeFiles/engine.dir/data_storage/schema.cpp.o" \
 "CMakeFiles/engine.dir/data_storage/batch.cpp.o" \
 "CMakeFiles/engine.dir/data_storage/column.cpp.o" \
@@ -165,21 +150,19 @@ engine_OBJECTS = \
 # External object files for target engine
 engine_EXTERNAL_OBJECTS =
 
-src/engine/engine: src/engine/CMakeFiles/engine.dir/main.cpp.o
-src/engine/engine: src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o
-src/engine/engine: src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.o
-src/engine/engine: src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o
-src/engine/engine: src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o
-src/engine/engine: src/engine/CMakeFiles/engine.dir/engine.cpp.o
-src/engine/engine: src/engine/CMakeFiles/engine.dir/build.make
-src/engine/engine: src/CsvMfReader/libreader.a
-src/engine/engine: src/CsvMfWriter/libwriter.a
-src/engine/engine: src/engine/CMakeFiles/engine.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable engine"
+src/engine/libengine.a: src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o
+src/engine/libengine.a: src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.o
+src/engine/libengine.a: src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o
+src/engine/libengine.a: src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o
+src/engine/libengine.a: src/engine/CMakeFiles/engine.dir/engine.cpp.o
+src/engine/libengine.a: src/engine/CMakeFiles/engine.dir/build.make
+src/engine/libengine.a: src/engine/CMakeFiles/engine.dir/link.txt
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/mac/Columnar_Database/build-o3-native/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX static library libengine.a"
+	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && $(CMAKE_COMMAND) -P CMakeFiles/engine.dir/cmake_clean_target.cmake
 	cd /Users/mac/Columnar_Database/build-o3-native/src/engine && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/engine.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
-src/engine/CMakeFiles/engine.dir/build: src/engine/engine
+src/engine/CMakeFiles/engine.dir/build: src/engine/libengine.a
 .PHONY : src/engine/CMakeFiles/engine.dir/build
 
 src/engine/CMakeFiles/engine.dir/clean:

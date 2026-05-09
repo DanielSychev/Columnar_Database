@@ -130,6 +130,20 @@ engine/fast:
 	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine.dir/build.make src/engine/CMakeFiles/engine.dir/build
 .PHONY : engine/fast
 
+# Convenience name for target.
+src/engine/CMakeFiles/engine_cli.dir/rule:
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/engine/CMakeFiles/engine_cli.dir/rule
+.PHONY : src/engine/CMakeFiles/engine_cli.dir/rule
+
+# Convenience name for target.
+engine_cli: src/engine/CMakeFiles/engine_cli.dir/rule
+.PHONY : engine_cli
+
+# fast build rule for target.
+engine_cli/fast:
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine_cli.dir/build.make src/engine/CMakeFiles/engine_cli.dir/build
+.PHONY : engine_cli/fast
+
 data_storage/batch.o: data_storage/batch.cpp.o
 .PHONY : data_storage/batch.o
 
@@ -231,7 +245,7 @@ main.o: main.cpp.o
 
 # target to build an object file
 main.cpp.o:
-	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine.dir/build.make src/engine/CMakeFiles/engine.dir/main.cpp.o
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine_cli.dir/build.make src/engine/CMakeFiles/engine_cli.dir/main.cpp.o
 .PHONY : main.cpp.o
 
 main.i: main.cpp.i
@@ -239,7 +253,7 @@ main.i: main.cpp.i
 
 # target to preprocess a source file
 main.cpp.i:
-	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine.dir/build.make src/engine/CMakeFiles/engine.dir/main.cpp.i
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine_cli.dir/build.make src/engine/CMakeFiles/engine_cli.dir/main.cpp.i
 .PHONY : main.cpp.i
 
 main.s: main.cpp.s
@@ -247,7 +261,7 @@ main.s: main.cpp.s
 
 # target to generate assembly for a file
 main.cpp.s:
-	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine.dir/build.make src/engine/CMakeFiles/engine.dir/main.cpp.s
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/engine/CMakeFiles/engine_cli.dir/build.make src/engine/CMakeFiles/engine_cli.dir/main.cpp.s
 .PHONY : main.cpp.s
 
 serialization/batch_serialization.o: serialization/batch_serialization.cpp.o
@@ -283,6 +297,7 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... engine"
+	@echo "... engine_cli"
 	@echo "... data_storage/batch.o"
 	@echo "... data_storage/batch.i"
 	@echo "... data_storage/batch.s"

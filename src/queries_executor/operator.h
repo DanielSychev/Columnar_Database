@@ -2,16 +2,24 @@
 
 #include "CsvMfReader/reader.h"
 #include "queries_executor/aggregation.h"
+#include "utils.h"
+#include <cstddef>
 #include <istream>
 #include <memory>
+#include <string>
+#include <vector>
+
+struct Transform;
 
 enum class OperatorType {
     SCAN,
     // COUNT,
     FILTER,
-    PROJECTION,
-    JOIN,
+    TRANSFORM,
     AGGREGATION,
+    GROUPBY,
+    ORDERBY,
+    LIMIT,
 };
 
 struct Operator {
@@ -37,14 +45,42 @@ struct ScanOperator : public Operator {
 // };
 
 struct FilterOperator : public Operator {
-    FilterOperator(std::shared_ptr<Operator> child_op, const std::string& column_name_, std::string&& value_);
+    FilterOperator(std::shared_ptr<Operator> child_op, std::vector<std::string>&& column_names, std::vector<std::string>&& values, std::vector<CompareSign>&& signs);
     virtual ~FilterOperator() = default;
-    std::string column_name;
-    std::string value;
+    std::vector<std::string> column_names;
+    std::vector<std::string> values;
+    std::vector<CompareSign> signs;
+};
+
+struct TransformsOperator : public Operator {
+    TransformsOperator(std::shared_ptr<Operator> child_op, std::vector<std::shared_ptr<Transform>> transforms_);
+    virtual ~TransformsOperator() = default;
+    std::vector<std::shared_ptr<Transform>> transforms;
 };
 
 struct AggregateOperator : public Operator {
     AggregateOperator(std::shared_ptr<Operator> child_op, std::vector<std::shared_ptr<Aggregation>> aggregations);
     virtual ~AggregateOperator() = default;
     std::vector<std::shared_ptr<Aggregation>> aggs;
+};
+
+struct GroupByOperator : public Operator {
+    GroupByOperator(std::shared_ptr<Operator> child_op, const std::vector<std::string>& group_by_columns, const std::vector<std::shared_ptr<Aggregation>>& aggs);
+    virtual ~GroupByOperator() = default;
+    std::vector<std::string> group_by_columns;
+    std::vector<std::shared_ptr<Aggregation>> aggs;
+};
+
+struct OrderByOperator : public Operator {
+    OrderByOperator(std::shared_ptr<Operator> child_op, const std::string& column_name, bool descending = false, size_t limit = 0);
+    virtual ~OrderByOperator() = default;
+    std::string column_name;
+    bool descending;
+    size_t limit;
+};
+
+struct LimitOperator : public Operator {
+    LimitOperator(std::shared_ptr<Operator> child_op, size_t limit);
+    virtual ~LimitOperator() = default;
+    size_t limit;
 };

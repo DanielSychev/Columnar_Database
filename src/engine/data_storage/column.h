@@ -26,13 +26,34 @@ public:
     virtual void PrintElem(Writer&, size_t, bool) const = 0;
     virtual std::string GetElemToString(size_t index) const = 0;
     virtual void Accept(ColumnVisitor& visitor) const = 0;
-    virtual bool Compare(const std::string&, size_t) const = 0;
+    virtual bool Compare(const std::string&, size_t, CompareSign) const = 0;
     virtual std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const = 0;
+    virtual std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const = 0;
     virtual size_t Size() const = 0;
     virtual ~Column() = default;
 };
 
 namespace column_detail {
+template<typename T> 
+bool BasicCompare(const T& a, const T& b, CompareSign sign) {
+    switch (sign) {
+        case CompareSign::EQUAL:
+            return a == b;
+        case CompareSign::NOT_EQUAL:
+            return a != b;
+        case CompareSign::LESS:
+            return a < b;
+        case CompareSign::GREATER:
+            return a > b;
+        case CompareSign::LESS_OR_EQUAL:
+            return a <= b;
+        case CompareSign::GREATER_OR_EQUAL:
+            return a >= b;
+        default:
+            throw std::invalid_argument("invalid CompareSign");
+    }
+}
+
 template <typename T>
 std::vector<T> CopyAllowedValues(const std::vector<T>& data, const std::vector<bool>& banned) {
     if (data.size() != banned.size()) {
@@ -48,6 +69,24 @@ std::vector<T> CopyAllowedValues(const std::vector<T>& data, const std::vector<b
     }
     return filtered_data;
 }
+
+template <typename T>
+std::vector<T> CopyReorderedValues(const std::vector<T>& data, const std::vector<size_t>& ordered) {
+    if (data.size() < ordered.size()) {
+        throw std::runtime_error("wrong reordered column format");
+    }
+
+    std::vector<T> reordered_data;
+    reordered_data.reserve(ordered.size());
+    for (auto& index: ordered) {
+        if (index >= data.size()) {
+            throw std::out_of_range("index out of range in CopyReorderedValues");
+        }
+        reordered_data.push_back(data[index]);
+    }
+    return reordered_data;
+}
+
 
 inline __int128_t ParseInt128(std::string_view value) {
     if (value.empty()) {
@@ -148,8 +187,9 @@ template <typename T>
 class NumericColumn : public Column {
 public:
     NumericColumn() = default;
-    NumericColumn(const NumericColumn& other, const std::vector<bool>& banned) :
-    data(column_detail::CopyAllowedValues(other.data, banned)) {}
+    NumericColumn(const std::vector<T>& data_) : data(data_) {}
+    // NumericColumn(const NumericColumn& other, const std::vector<bool>& banned) :
+    // data(column_detail::CopyAllowedValues(other.data, banned)) {}
 
     void AddElem(std::string&& value) override {
         data.push_back(column_detail::ParseNumeric<T>(value));
@@ -185,12 +225,20 @@ public:
         visitor.Visit(*this);
     }
 
-    bool Compare(const std::string& elem, size_t index) const override {
-        return data[index] == column_detail::ParseNumeric<T>(elem);
+    bool Compare(const std::string& elem, size_t index, CompareSign sign) const override {
+        if (sign == CompareSign::LIKE) {
+            throw std::invalid_argument("LIKE is supported only for string columns");
+        }
+        return column_detail::BasicCompare(data[index], column_detail::ParseNumeric<T>(elem), sign);
     }
 
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override {
-        return std::make_shared<NumericColumn<T>>(*this, banned);
+        // return std::make_shared<NumericColumn<T>>(*this, banned);
+        return std::make_shared<NumericColumn<T>>(column_detail::CopyAllowedValues(data, banned));
+    }
+
+    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override {
+        return std::make_shared<NumericColumn<T>>(column_detail::CopyReorderedValues(data, ordered));
     }
 
     size_t Size() const override {
@@ -219,6 +267,7 @@ using DoubleColumn = NumericColumn<double>;
 class StrColumn : public Column {
 public:
     StrColumn() = default;
+    StrColumn(const std::vector<std::string>& data_) : data(data_) {}
     StrColumn(const StrColumn& other, const std::vector<bool>& banned);
     void AddElem(std::string&&) override;
     void Print(Writer&) const override;
@@ -226,8 +275,9 @@ public:
     void PrintElem(Writer&, size_t, bool) const override;
     std::string GetElemToString(size_t index) const override;
     void Accept(ColumnVisitor& visitor) const override;
-    bool Compare(const std::string&, size_t) const override;
+    bool Compare(const std::string&, size_t, CompareSign) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
+    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
     const std::vector<std::string>& Data() const;
     ~StrColumn() override = default;
@@ -238,7 +288,9 @@ protected:
 class TimeStampColumn : public StrColumn {
 public:
     TimeStampColumn() = default;
+    TimeStampColumn(const std::vector<std::string>& data_) : StrColumn(data_) {}
     TimeStampColumn(const TimeStampColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
+    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     void Accept(ColumnVisitor& visitor) const override;
     ~TimeStampColumn() override = default;
 private:
@@ -247,7 +299,9 @@ private:
 class DateColumn : public StrColumn {
 public:
     DateColumn() = default;
+    DateColumn(const std::vector<std::string>& data_) : StrColumn(data_) {}
     DateColumn(const DateColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
+    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     void Accept(ColumnVisitor& visitor) const override;
     ~DateColumn() override = default;
 private:

@@ -158,6 +158,20 @@ test_batch_serialization/fast:
 	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/Tests/CMakeFiles/test_batch_serialization.dir/build.make src/Tests/CMakeFiles/test_batch_serialization.dir/build
 .PHONY : test_batch_serialization/fast
 
+# Convenience name for target.
+src/Tests/CMakeFiles/test_scan_executor.dir/rule:
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/Tests/CMakeFiles/test_scan_executor.dir/rule
+.PHONY : src/Tests/CMakeFiles/test_scan_executor.dir/rule
+
+# Convenience name for target.
+test_scan_executor: src/Tests/CMakeFiles/test_scan_executor.dir/rule
+.PHONY : test_scan_executor
+
+# fast build rule for target.
+test_scan_executor/fast:
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/Tests/CMakeFiles/test_scan_executor.dir/build.make src/Tests/CMakeFiles/test_scan_executor.dir/build
+.PHONY : test_scan_executor/fast
+
 TestBatchSerialization.o: TestBatchSerialization.cpp.o
 .PHONY : TestBatchSerialization.o
 
@@ -205,6 +219,30 @@ TestReader.s: TestReader.cpp.s
 TestReader.cpp.s:
 	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/Tests/CMakeFiles/test_reader.dir/build.make src/Tests/CMakeFiles/test_reader.dir/TestReader.cpp.s
 .PHONY : TestReader.cpp.s
+
+TestScanExecutor.o: TestScanExecutor.cpp.o
+.PHONY : TestScanExecutor.o
+
+# target to build an object file
+TestScanExecutor.cpp.o:
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/Tests/CMakeFiles/test_scan_executor.dir/build.make src/Tests/CMakeFiles/test_scan_executor.dir/TestScanExecutor.cpp.o
+.PHONY : TestScanExecutor.cpp.o
+
+TestScanExecutor.i: TestScanExecutor.cpp.i
+.PHONY : TestScanExecutor.i
+
+# target to preprocess a source file
+TestScanExecutor.cpp.i:
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/Tests/CMakeFiles/test_scan_executor.dir/build.make src/Tests/CMakeFiles/test_scan_executor.dir/TestScanExecutor.cpp.i
+.PHONY : TestScanExecutor.cpp.i
+
+TestScanExecutor.s: TestScanExecutor.cpp.s
+.PHONY : TestScanExecutor.s
+
+# target to generate assembly for a file
+TestScanExecutor.cpp.s:
+	cd /Users/mac/Columnar_Database/build-o3-native && $(MAKE) $(MAKESILENT) -f src/Tests/CMakeFiles/test_scan_executor.dir/build.make src/Tests/CMakeFiles/test_scan_executor.dir/TestScanExecutor.cpp.s
+.PHONY : TestScanExecutor.cpp.s
 
 TestWriter.o: TestWriter.cpp.o
 .PHONY : TestWriter.o
@@ -336,6 +374,7 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... test_batch_serialization"
 	@echo "... test_reader"
+	@echo "... test_scan_executor"
 	@echo "... test_writer"
 	@echo "... TestBatchSerialization.o"
 	@echo "... TestBatchSerialization.i"
@@ -343,6 +382,9 @@ help:
 	@echo "... TestReader.o"
 	@echo "... TestReader.i"
 	@echo "... TestReader.s"
+	@echo "... TestScanExecutor.o"
+	@echo "... TestScanExecutor.i"
+	@echo "... TestScanExecutor.s"
 	@echo "... TestWriter.o"
 	@echo "... TestWriter.i"
 	@echo "... TestWriter.s"

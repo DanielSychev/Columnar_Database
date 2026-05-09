@@ -34,8 +34,9 @@ struct DateMinMaxVisitor : public ColumnVisitor {
     void Visit(const Int128Column&) override { NumericVisit(); }
     void Visit(const DoubleColumn&) override { NumericVisit(); }
 
-    void Visit(const StrColumn&) override {
-        throw std::runtime_error("date function for string");
+    void Visit(const StrColumn& col) override { // не баг а патч, новая мета я бы сказал (потом переименую визитор в str_min_max_visitor)
+        // throw std::runtime_error("date function for string");
+        DateOrTimeVisit(col);
     }
 
     void Visit(const DateColumn& col) override { DateOrTimeVisit(col); }

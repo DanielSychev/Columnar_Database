@@ -3,7 +3,37 @@
 #include <queries_executor/aggregation.h>
 #include <stdexcept>
 
-SumAggregation::SumAggregation(const std::string col_name) : column_name(col_name), visitor() {
+CountAggregation::CountAggregation(std::string result_name_) : Aggregation(result_name_){
+    if (result_name.empty()) {
+        result_name = "COUNT(*)";
+    }
+}
+
+void CountAggregation::RunBatch(std::shared_ptr<Batch> batch) {
+    if (!batch) {
+        return;
+    }
+    rows_count += batch->RowsCount();
+}
+
+std::string CountAggregation::GetResultValue() const {
+    return std::to_string(rows_count);
+}
+
+Type CountAggregation::GetResultType() const {
+    return Type::int64;
+}
+
+std::shared_ptr<Aggregation> CountAggregation::Clone() const {
+    return std::make_shared<CountAggregation>(result_name);
+}
+
+
+SumAggregation::SumAggregation(const std::string col_name, std::string result_name_)
+    : Aggregation(result_name_), column_name(col_name), visitor() {
+    if (result_name.empty()) {
+        result_name = "SUM(" + col_name + ")";
+    }
 }
 
 void SumAggregation::RunBatch(std::shared_ptr<Batch> batch) {
@@ -25,37 +55,30 @@ void SumAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     batch->ColumnAt(column_index).Accept(visitor);
 }
 
-std::shared_ptr<Column> SumAggregation::GetResult() const {
+std::string SumAggregation::GetResultValue() const {
     if (input_type.has_value() && input_type.value() == Type::double_) {
-        auto column = std::make_shared<DoubleColumn>();
-        column->AddElem(std::to_string(visitor.DoubleSum()));
-        return column;
+        return std::to_string(visitor.DoubleSum());
     }
 
-    auto column = std::make_shared<Int128Column>();
-    column->AddElem(column_detail::ToString(visitor.IntegralSum()));
-    return column;
+    return column_detail::ToString(visitor.IntegralSum());
 }
 
-
-
-
-void CountAggregation::RunBatch(std::shared_ptr<Batch> batch) {
-    if (!batch) {
-        return;
+Type SumAggregation::GetResultType() const {
+    if (input_type.has_value() && input_type.value() == Type::double_) {
+        return Type::double_;
     }
-    rows_count += batch->RowsCount();
+    return Type::int128;
 }
 
-std::shared_ptr<Column> CountAggregation::GetResult() const {
-    auto column = std::make_shared<Int64Column>();
-    column->AddElem(std::to_string(rows_count));
-    return column;
+std::shared_ptr<Aggregation> SumAggregation::Clone() const {
+    return std::make_shared<SumAggregation>(column_name, result_name);
 }
 
 
-
-AvgAggregation::AvgAggregation(const std::string col_name) : column_name(col_name), visitor() {
+AvgAggregation::AvgAggregation(const std::string col_name, std::string result_name_) : Aggregation(result_name_), column_name(col_name), visitor() {
+    if (result_name.empty()) {
+        result_name = "AVG(" + col_name + ")";
+    }
 }
 
 void AvgAggregation::RunBatch(std::shared_ptr<Batch> batch) {
@@ -77,13 +100,24 @@ void AvgAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     batch->ColumnAt(column_index).Accept(visitor);
 }
 
-std::shared_ptr<Column> AvgAggregation::GetResult() const {
-    auto column = std::make_shared<Int64Column>();
-    column->AddElem(std::to_string(visitor.Avg()));
-    return column;
+std::string AvgAggregation::GetResultValue() const {
+    return std::to_string(visitor.Avg());
 }
 
-CountDistinctAggregation::CountDistinctAggregation(const std::string col_name) : column_name(col_name) {
+Type AvgAggregation::GetResultType() const {
+    return Type::int64;
+}
+
+std::shared_ptr<Aggregation> AvgAggregation::Clone() const {
+    return std::make_shared<AvgAggregation>(column_name, result_name);
+}
+
+
+
+CountDistinctAggregation::CountDistinctAggregation(const std::string col_name, std::string result_name_) : Aggregation(result_name_), column_name(col_name) {
+    if (result_name.empty()) {
+        result_name = "COUNT(DISTINCT " + col_name + ")";
+    }
 }
 
 void CountDistinctAggregation::RunBatch(std::shared_ptr<Batch> batch) {
@@ -102,15 +136,24 @@ void CountDistinctAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     }
 }
 
-std::shared_ptr<Column> CountDistinctAggregation::GetResult() const {
-    auto column = std::make_shared<Int64Column>();
-    column->AddElem(std::to_string(distinct_values.size()));
-    return column;
+std::string CountDistinctAggregation::GetResultValue() const {
+    return std::to_string(distinct_values.size());
+}
+
+Type CountDistinctAggregation::GetResultType() const {
+    return Type::int64;
+}
+
+std::shared_ptr<Aggregation> CountDistinctAggregation::Clone() const {
+    return std::make_shared<CountDistinctAggregation>(column_name, result_name);
 }
 
 
 
-MaxAggregation::MaxAggregation(const std::string col_name) : column_name(col_name), numeric_visitor(), date_visitor() {
+MaxAggregation::MaxAggregation(const std::string col_name, std::string result_name_) : Aggregation(result_name_), column_name(col_name), numeric_visitor(), date_visitor() {
+    if (result_name.empty()) {
+        result_name = "MAX(" + col_name + ")";
+    }
 }
 
 void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch) {
@@ -136,20 +179,31 @@ void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     batch->ColumnAt(column_index).Accept(numeric_visitor);
 }
 
-std::shared_ptr<Column> MaxAggregation::GetResult() const {
+std::string MaxAggregation::GetResultValue() const {
     if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp)) {
-        auto column = std::make_shared<StrColumn>();
-        column->AddElem(std::string(date_visitor.Max()));
-        return column;
+        return std::string(date_visitor.Max());
     }
 
-    auto column = std::make_shared<Int64Column>();
-    column->AddElem(std::to_string(numeric_visitor.Max()));
-    return column;
+    return std::to_string(numeric_visitor.Max());
+}
+
+Type MaxAggregation::GetResultType() const {
+    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp)) {
+        return input_type.value();
+    }
+    return Type::int64;
+}
+
+std::shared_ptr<Aggregation> MaxAggregation::Clone() const {
+    return std::make_shared<MaxAggregation>(column_name, result_name);
 }
 
 
-MinAggregation::MinAggregation(const std::string col_name) : column_name(col_name), numeric_visitor(), date_visitor() {
+
+MinAggregation::MinAggregation(const std::string col_name, std::string result_name_) : Aggregation(result_name_), column_name(col_name), numeric_visitor(), date_visitor() {
+    if (result_name.empty()) {
+        result_name = "MIN(" + col_name + ")";
+    }
 }
 
 void MinAggregation::RunBatch(std::shared_ptr<Batch> batch) {
@@ -168,21 +222,28 @@ void MinAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     } else {
         throw std::runtime_error("no such column in schema");
     }
-    if (input_type.value() == Type::date || input_type.value() == Type::timestamp) {
+    if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
         batch->ColumnAt(column_index).Accept(date_visitor);
         return;
     }
     batch->ColumnAt(column_index).Accept(numeric_visitor);
 }
 
-std::shared_ptr<Column> MinAggregation::GetResult() const {
-    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp)) {
-        auto column = std::make_shared<StrColumn>();
-        column->AddElem(std::string(date_visitor.Min()));
-        return column;
+std::string MinAggregation::GetResultValue() const {
+    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str)) {
+        return std::string(date_visitor.Min());
     }
 
-    auto column = std::make_shared<Int64Column>();
-    column->AddElem(std::to_string(numeric_visitor.Min()));
-    return column;
+    return std::to_string(numeric_visitor.Min());
+}
+
+Type MinAggregation::GetResultType() const {
+    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str)) {
+        return input_type.value();
+    }
+    return Type::int64;
+}
+
+std::shared_ptr<Aggregation> MinAggregation::Clone() const {
+    return std::make_shared<MinAggregation>(column_name, result_name);
 }

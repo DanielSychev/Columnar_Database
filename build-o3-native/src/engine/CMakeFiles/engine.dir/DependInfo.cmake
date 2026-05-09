@@ -12,7 +12,6 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/Users/mac/Columnar_Database/src/engine/data_storage/column.cpp" "src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o" "gcc" "src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o.d"
   "/Users/mac/Columnar_Database/src/engine/data_storage/schema.cpp" "src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o" "gcc" "src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o.d"
   "/Users/mac/Columnar_Database/src/engine/engine.cpp" "src/engine/CMakeFiles/engine.dir/engine.cpp.o" "gcc" "src/engine/CMakeFiles/engine.dir/engine.cpp.o.d"
-  "/Users/mac/Columnar_Database/src/engine/main.cpp" "src/engine/CMakeFiles/engine.dir/main.cpp.o" "gcc" "src/engine/CMakeFiles/engine.dir/main.cpp.o.d"
   "/Users/mac/Columnar_Database/src/engine/serialization/batch_serialization.cpp" "src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o" "gcc" "src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o.d"
   )
 

@@ -10,23 +10,34 @@
 // #include <queries_executor/operator.h>
 
 struct Aggregation {
+    Aggregation(std::string result_name_ = "") : result_name(result_name_) {}
     virtual void RunBatch(std::shared_ptr<Batch>) = 0;
-    virtual std::shared_ptr<Column> GetResult() const = 0;
+    virtual std::string GetResultValue() const = 0;
+    virtual Type GetResultType() const = 0;
+    virtual std::shared_ptr<Aggregation> Clone() const = 0;
     virtual ~Aggregation() = default;
+
+    std::string result_name;
 };
 
 struct CountAggregation : public Aggregation {
+    CountAggregation(std::string result_name_ = "");
     void RunBatch(std::shared_ptr<Batch>) override;
     virtual ~CountAggregation() = default;
-    std::shared_ptr<Column> GetResult() const override;
+    std::string GetResultValue() const override;
+    Type GetResultType() const override;
+    std::shared_ptr<Aggregation> Clone() const override;
 
     size_t rows_count = 0;
+
 };
 
 struct SumAggregation : public Aggregation {
-    SumAggregation(const std::string col_name);
+    SumAggregation(const std::string col_name, std::string result_name = "");
     void RunBatch(std::shared_ptr<Batch>) override;
-    std::shared_ptr<Column> GetResult() const override;
+    std::string GetResultValue() const override;
+    Type GetResultType() const override;
+    std::shared_ptr<Aggregation> Clone() const override;
     virtual ~SumAggregation() = default;
 
     std::string column_name;
@@ -35,9 +46,11 @@ struct SumAggregation : public Aggregation {
 };
 
 struct AvgAggregation : public Aggregation {
-    AvgAggregation(const std::string col_name);
+    AvgAggregation(const std::string col_name, std::string result_name = "");
     void RunBatch(std::shared_ptr<Batch>) override;
-    std::shared_ptr<Column> GetResult() const override;
+    std::string GetResultValue() const override;
+    Type GetResultType() const override;
+    std::shared_ptr<Aggregation> Clone() const override;
     virtual ~AvgAggregation() = default;
 
     std::string column_name;
@@ -46,9 +59,11 @@ struct AvgAggregation : public Aggregation {
 };
 
 struct CountDistinctAggregation : public Aggregation {
-    CountDistinctAggregation(const std::string col_name);
+    CountDistinctAggregation(const std::string col_name, std::string result_name = "");
     void RunBatch(std::shared_ptr<Batch>) override;
-    std::shared_ptr<Column> GetResult() const override;
+    std::string GetResultValue() const override;
+    Type GetResultType() const override;
+    std::shared_ptr<Aggregation> Clone() const override;
     virtual ~CountDistinctAggregation() = default;
 
     std::string column_name;
@@ -56,9 +71,11 @@ struct CountDistinctAggregation : public Aggregation {
 };
 
 struct MaxAggregation : public Aggregation {
-    MaxAggregation(const std::string col_name);
+    MaxAggregation(const std::string col_name, std::string result_name = "");
     void RunBatch(std::shared_ptr<Batch>) override;
-    std::shared_ptr<Column> GetResult() const override;
+    std::string GetResultValue() const override;
+    Type GetResultType() const override;
+    std::shared_ptr<Aggregation> Clone() const override;
     virtual ~MaxAggregation() = default;
 
     std::string column_name;
@@ -68,9 +85,11 @@ struct MaxAggregation : public Aggregation {
 };
 
 struct MinAggregation : public Aggregation {
-    MinAggregation(const std::string col_name);
+    MinAggregation(const std::string col_name, std::string result_name = "");
     void RunBatch(std::shared_ptr<Batch>) override;
-    std::shared_ptr<Column> GetResult() const override;
+    std::string GetResultValue() const override;
+    Type GetResultType() const override;
+    std::shared_ptr<Aggregation> Clone() const override;
     virtual ~MinAggregation() = default;
 
     std::string column_name;

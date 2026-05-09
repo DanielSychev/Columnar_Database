@@ -1,0 +1,1 @@
+/Library/Developer/CommandLineTools/usr/bin/c++  -Wall -Wextra -Wno-unused-variable -O3 -march=native -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/engine_cli.dir/main.cpp.o -o engine_cli  libengine.a ../CsvMfReader/libreader.a ../CsvMfWriter/libwriter.a

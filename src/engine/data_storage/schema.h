@@ -8,7 +8,7 @@
 #include "CsvMfWriter/writer.h"
 
 enum class Type {
-    int64, int32, int16, int8, double_, str, date, timestamp
+    int128, int64, int32, int16, int8, double_, str, date, timestamp
 };
 
 std::string_view TypeToString(Type t);
