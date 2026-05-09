@@ -1,0 +1,122 @@
+[
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/CsvMfReader",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/reader.dir/reader.cpp.o -c /Users/mac/Columnar_Database/src/CsvMfReader/reader.cpp",
+  "file": "/Users/mac/Columnar_Database/src/CsvMfReader/reader.cpp",
+  "output": "src/CsvMfReader/CMakeFiles/reader.dir/reader.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/CsvMfWriter",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/writer.dir/writer.cpp.o -c /Users/mac/Columnar_Database/src/CsvMfWriter/writer.cpp",
+  "file": "/Users/mac/Columnar_Database/src/CsvMfWriter/writer.cpp",
+  "output": "src/CsvMfWriter/CMakeFiles/writer.dir/writer.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/engine",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/engine.dir/data_storage/schema.cpp.o -c /Users/mac/Columnar_Database/src/engine/data_storage/schema.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/data_storage/schema.cpp",
+  "output": "src/engine/CMakeFiles/engine.dir/data_storage/schema.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/engine",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/engine.dir/data_storage/batch.cpp.o -c /Users/mac/Columnar_Database/src/engine/data_storage/batch.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/data_storage/batch.cpp",
+  "output": "src/engine/CMakeFiles/engine.dir/data_storage/batch.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/engine",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/engine.dir/data_storage/column.cpp.o -c /Users/mac/Columnar_Database/src/engine/data_storage/column.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/data_storage/column.cpp",
+  "output": "src/engine/CMakeFiles/engine.dir/data_storage/column.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/engine",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o -c /Users/mac/Columnar_Database/src/engine/serialization/batch_serialization.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/serialization/batch_serialization.cpp",
+  "output": "src/engine/CMakeFiles/engine.dir/serialization/batch_serialization.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/engine",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/engine.dir/engine.cpp.o -c /Users/mac/Columnar_Database/src/engine/engine.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/engine.cpp",
+  "output": "src/engine/CMakeFiles/engine.dir/engine.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/engine",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/engine_cli.dir/main.cpp.o -c /Users/mac/Columnar_Database/src/engine/main.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/main.cpp",
+  "output": "src/engine/CMakeFiles/engine_cli.dir/main.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/Tests",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src -isystem /opt/homebrew/include  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/test_reader.dir/TestReader.cpp.o -c /Users/mac/Columnar_Database/src/Tests/TestReader.cpp",
+  "file": "/Users/mac/Columnar_Database/src/Tests/TestReader.cpp",
+  "output": "src/Tests/CMakeFiles/test_reader.dir/TestReader.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/Tests",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src -isystem /opt/homebrew/include  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/test_writer.dir/TestWriter.cpp.o -c /Users/mac/Columnar_Database/src/Tests/TestWriter.cpp",
+  "file": "/Users/mac/Columnar_Database/src/Tests/TestWriter.cpp",
+  "output": "src/Tests/CMakeFiles/test_writer.dir/TestWriter.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/Tests",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src -isystem /opt/homebrew/include  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/test_batch_serialization.dir/TestBatchSerialization.cpp.o -c /Users/mac/Columnar_Database/src/Tests/TestBatchSerialization.cpp",
+  "file": "/Users/mac/Columnar_Database/src/Tests/TestBatchSerialization.cpp",
+  "output": "src/Tests/CMakeFiles/test_batch_serialization.dir/TestBatchSerialization.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/Tests",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src -isystem /opt/homebrew/include  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/test_batch_serialization.dir/__/engine/data_storage/schema.cpp.o -c /Users/mac/Columnar_Database/src/engine/data_storage/schema.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/data_storage/schema.cpp",
+  "output": "src/Tests/CMakeFiles/test_batch_serialization.dir/__/engine/data_storage/schema.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/Tests",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src -isystem /opt/homebrew/include  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/test_batch_serialization.dir/__/engine/data_storage/batch.cpp.o -c /Users/mac/Columnar_Database/src/engine/data_storage/batch.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/data_storage/batch.cpp",
+  "output": "src/Tests/CMakeFiles/test_batch_serialization.dir/__/engine/data_storage/batch.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/Tests",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src -isystem /opt/homebrew/include  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/test_batch_serialization.dir/__/engine/data_storage/column.cpp.o -c /Users/mac/Columnar_Database/src/engine/data_storage/column.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/data_storage/column.cpp",
+  "output": "src/Tests/CMakeFiles/test_batch_serialization.dir/__/engine/data_storage/column.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/Tests",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src -isystem /opt/homebrew/include  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/test_batch_serialization.dir/__/engine/serialization/batch_serialization.cpp.o -c /Users/mac/Columnar_Database/src/engine/serialization/batch_serialization.cpp",
+  "file": "/Users/mac/Columnar_Database/src/engine/serialization/batch_serialization.cpp",
+  "output": "src/Tests/CMakeFiles/test_batch_serialization.dir/__/engine/serialization/batch_serialization.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/Tests",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src -isystem /opt/homebrew/include  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/test_scan_executor.dir/TestScanExecutor.cpp.o -c /Users/mac/Columnar_Database/src/Tests/TestScanExecutor.cpp",
+  "file": "/Users/mac/Columnar_Database/src/Tests/TestScanExecutor.cpp",
+  "output": "src/Tests/CMakeFiles/test_scan_executor.dir/TestScanExecutor.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/queries_executor",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/executor.dir/executor.cpp.o -c /Users/mac/Columnar_Database/src/queries_executor/executor.cpp",
+  "file": "/Users/mac/Columnar_Database/src/queries_executor/executor.cpp",
+  "output": "src/queries_executor/CMakeFiles/executor.dir/executor.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/queries_executor",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/executor.dir/operator.cpp.o -c /Users/mac/Columnar_Database/src/queries_executor/operator.cpp",
+  "file": "/Users/mac/Columnar_Database/src/queries_executor/operator.cpp",
+  "output": "src/queries_executor/CMakeFiles/executor.dir/operator.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/src/queries_executor",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/executor.dir/aggregation.cpp.o -c /Users/mac/Columnar_Database/src/queries_executor/aggregation.cpp",
+  "file": "/Users/mac/Columnar_Database/src/queries_executor/aggregation.cpp",
+  "output": "src/queries_executor/CMakeFiles/executor.dir/aggregation.cpp.o"
+},
+{
+  "directory": "/Users/mac/Columnar_Database/build-o3-native/clickbench",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/mac/Columnar_Database/src  -Wall -Wextra -Wno-unused-variable -O3 -march=native -std=gnu++2b -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk -o CMakeFiles/clickbench.dir/clickbench.cpp.o -c /Users/mac/Columnar_Database/clickbench/clickbench.cpp",
+  "file": "/Users/mac/Columnar_Database/clickbench/clickbench.cpp",
+  "output": "clickbench/CMakeFiles/clickbench.dir/clickbench.cpp.o"
+}
+]

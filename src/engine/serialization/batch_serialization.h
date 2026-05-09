@@ -7,6 +7,6 @@
 namespace batch_serialization {
 bool ReadCsvBatch(Reader& reader, Batch& batch);
 bool ReadMfBatch(Reader& reader, Batch& batch);
-void WriteMfBatch(const Batch& batch, Writer& writer);
+size_t WriteMfBatch(const Batch& batch, Writer& writer); // будет возвращать meta_position
 void WriteCsvBatch(const Batch& batch, Writer& writer);
 }

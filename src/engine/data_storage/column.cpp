@@ -17,29 +17,43 @@ void PrintElemVisitor(Writer& w, const std::vector<T>& v, size_t i, bool b) {
     w.WriteElem(v[i], b);
 }
 
-void Int64Column::AddElem(std::string&& s) {
-    data.push_back(std::stoll(s)); // stoll сам делает throw в случае чего
-}
+namespace {
+bool LikeCompare(std::string_view value, std::string_view pattern) {
+    std::vector<bool> previous(pattern.size() + 1, false);
+    std::vector<bool> current(pattern.size() + 1, false);
+    previous[0] = true;
 
-void Int64Column::Print(Writer& w) const {
-    w.BinaryWriteVector(data);
-}
+    for (size_t pattern_pos = 1; pattern_pos <= pattern.size(); ++pattern_pos) {
+        if (pattern[pattern_pos - 1] == '%') {
+            previous[pattern_pos] = previous[pattern_pos - 1];
+        }
+    }
 
-void Int64Column::Read(Reader& r) {
-    r.BinaryReadVector(data);
-}
+    for (size_t value_pos = 1; value_pos <= value.size(); ++value_pos) {
+        current[0] = false;
+        for (size_t pattern_pos = 1; pattern_pos <= pattern.size(); ++pattern_pos) {
+            if (pattern[pattern_pos - 1] == '%') {
+                current[pattern_pos] = current[pattern_pos - 1] || previous[pattern_pos];
+            } else if (pattern[pattern_pos - 1] == '_' || pattern[pattern_pos - 1] == value[value_pos - 1]) {
+                current[pattern_pos] = previous[pattern_pos - 1];
+            } else {
+                current[pattern_pos] = false;
+            }
+        }
+        std::swap(previous, current);
+        std::fill(current.begin(), current.end(), false);
+    }
 
-void Int64Column::PrintElem(Writer& w, size_t i, bool b) const {
-    PrintElemVisitor(w, data, i, b);
+    return previous[pattern.size()];
 }
-
-size_t Int64Column::Size() const {
-    return data.size();
 }
 
 void StrColumn::AddElem(std::string&& s) {
     data.push_back(std::move(s));
 }
+
+StrColumn::StrColumn(const StrColumn& other, const std::vector<bool>& banned) :
+data(column_detail::CopyAllowedValues(other.data, banned)) {}
 
 void StrColumn::Print(Writer& w) const {
     PrintVisitor(w, data);
@@ -55,6 +69,52 @@ void StrColumn::PrintElem(Writer& w, size_t i, bool b) const {
     PrintElemVisitor(w, data, i, b);
 }
 
+std::string StrColumn::GetElemToString(size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in GetElemToString");
+    }
+    return data[index];
+}
+
+void StrColumn::Accept(ColumnVisitor& visitor) const {
+    visitor.Visit(*this);
+}
+
 size_t StrColumn::Size() const {
     return data.size();
+}
+
+bool StrColumn::Compare(const std::string& elem, size_t i, CompareSign sign) const {
+    if (sign == CompareSign::LIKE) {
+        return LikeCompare(data[i], elem);
+    }
+    return column_detail::BasicCompare(data[i], elem, sign);
+}
+
+std::shared_ptr<Column> StrColumn::CopyFiltered(const std::vector<bool>& banned) const {
+    return std::make_shared<StrColumn>(*this, banned);
+}
+
+std::shared_ptr<Column> StrColumn::CopyReordered(const std::vector<size_t>& ordered) const {
+    return std::make_shared<StrColumn>(column_detail::CopyReorderedValues(data, ordered));
+}
+
+const std::vector<std::string>& StrColumn::Data() const {
+    return data;
+}
+
+std::shared_ptr<Column> TimeStampColumn::CopyReordered(const std::vector<size_t>& ordered) const {
+    return std::make_shared<TimeStampColumn>(column_detail::CopyReorderedValues(data, ordered));
+}
+
+void TimeStampColumn::Accept(ColumnVisitor& visitor) const {
+    visitor.Visit(*this);
+}
+
+std::shared_ptr<Column> DateColumn::CopyReordered(const std::vector<size_t>& ordered) const {
+    return std::make_shared<DateColumn>(column_detail::CopyReorderedValues(data, ordered));
+}
+
+void DateColumn::Accept(ColumnVisitor& visitor) const {
+    visitor.Visit(*this);
 }

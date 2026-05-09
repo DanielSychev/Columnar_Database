@@ -12,7 +12,7 @@ Schema MakeTestSchema() {
     Schema schema;
     schema.names = {"id", "name"};
     schema.types = {Type::int64, Type::str};
-    schema.col_count = schema.names.size();
+    schema.column_count = schema.names.size();
     return schema;
 }
 }
@@ -61,4 +61,29 @@ TEST(BatchSerialization, CsvWriterUsesOnlyRealRowCount) {
     batch_serialization::WriteCsvBatch(batch, csv_writer);
 
     EXPECT_EQ(csv_output.str(), "1,Alice\n");
+}
+
+TEST(BatchSerialization, CanWriteSchemaLessBatchBuiltFromColumns) {
+    Batch batch(10);
+
+    auto id_column = std::make_shared<Int64Column>();
+    id_column->AddElem("1");
+    id_column->AddElem("2");
+
+    auto name_column = std::make_shared<StrColumn>();
+    name_column->AddElem("Alice");
+    name_column->AddElem("Bob");
+
+    batch.AddColumn(id_column);
+    batch.AddColumn(name_column);
+
+    ASSERT_FALSE(batch.HasSchema());
+    ASSERT_EQ(batch.RowsCount(), 2);
+    ASSERT_EQ(batch.ColumnsCount(), 2);
+
+    std::stringstream csv_output;
+    Writer csv_writer(csv_output);
+    batch_serialization::WriteCsvBatch(batch, csv_writer);
+
+    EXPECT_EQ(csv_output.str(), "1,Alice\n2,Bob\n");
 }

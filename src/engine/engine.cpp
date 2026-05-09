@@ -15,13 +15,13 @@ void Engine::CsvToMfBatchProcessor(const Schema& schema) {
         if (!batch_serialization::ReadCsvBatch(data_reader, batch)) {
             break;
         }
-        batch_positions.push_back(data_writer.TellPos());
-        batch_serialization::WriteMfBatch(batch, data_writer);
+        size_t meta_pos = batch_serialization::WriteMfBatch(batch, data_writer);
+        batch_meta_positions.push_back(meta_pos);
     }
 }
 
 void Engine::CsvToMfProcessor() {
-    Schema schema; // пишем батчи
+    Schema schema;
     schema.ReadSchema(type_reader);
     if (schema.NumColums() == 0) {
         throw std::runtime_error("schema is empty or was not read");
@@ -32,9 +32,9 @@ void Engine::CsvToMfProcessor() {
     data_writer.BinaryWrite(schema.NumColums());
     schema.PrintSchema(data_writer);
     
-    data_writer.BinaryWrite(batch_positions.size()); // пишем количество батчей и позиции
-    for (size_t i = 0; i < batch_positions.size(); ++i) {
-        data_writer.BinaryWrite(batch_positions[i]);
+    data_writer.BinaryWrite(batch_meta_positions.size()); // пишем количество батчей и позиции начал их меты
+    for (size_t i = 0; i < batch_meta_positions.size(); ++i) {
+        data_writer.BinaryWrite(batch_meta_positions[i]);
         // std::cout << batch_positions[i] << std::endl;
     }
     
@@ -44,15 +44,20 @@ void Engine::CsvToMfProcessor() {
 void Engine::MfToCsvBatchProcessor(const Schema& schema) {
     size_t batch_count; // читаем позиции батчей
     data_reader.BinaryRead(batch_count);
-    batch_positions.resize(batch_count);
-    for (size_t i = 0; i < batch_positions.size(); ++i) {
-        data_reader.BinaryRead(batch_positions[i]);
+    batch_meta_positions.resize(batch_count);
+    for (size_t i = 0; i < batch_meta_positions.size(); ++i) {
+        data_reader.BinaryRead(batch_meta_positions[i]);
         // std::cout << batch_positions[i] << std::endl;
     }
 
-    for (size_t i = 0; i < batch_positions.size(); ++i) { // читаем из my_format и пишем батчи в csv
-        data_reader.SetPos(batch_positions[i]);
+    for (size_t i = 0; i < batch_meta_positions.size(); ++i) { // читаем из my_format и пишем батчи в csv
+        data_reader.SetPos(batch_meta_positions[i]);
+        size_t batch_column_start;
+        data_reader.BinaryRead(batch_column_start);
+        data_reader.SetPos(batch_column_start);
+
         Batch batch(schema, batch_rows_count);
+        
         if (!batch_serialization::ReadMfBatch(data_reader, batch)) {
             throw std::runtime_error("wrong batch format");
         }
