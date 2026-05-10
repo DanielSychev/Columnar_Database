@@ -72,9 +72,9 @@ struct GroupByOperator : public Operator {
 };
 
 struct OrderByOperator : public Operator {
-    OrderByOperator(std::shared_ptr<Operator> child_op, const std::string& column_name, bool descending = false, size_t limit = 0);
+    OrderByOperator(std::shared_ptr<Operator> child_op, std::vector<std::string>&& column_names, bool descending = false, size_t limit = Constants::ORDER_BY_LIMIT);
     virtual ~OrderByOperator() = default;
-    std::string column_name;
+    std::vector<std::string> column_names;
     bool descending;
     size_t limit;
 };

@@ -88,6 +88,9 @@ bool StrColumn::Compare(const std::string& elem, size_t i, CompareSign sign) con
     if (sign == CompareSign::LIKE) {
         return LikeCompare(data[i], elem);
     }
+    if (sign == CompareSign::NOT_LIKE) {
+        return !LikeCompare(data[i], elem);
+    }
     return column_detail::BasicCompare(data[i], elem, sign);
 }
 
