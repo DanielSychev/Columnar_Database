@@ -1,8 +1,17 @@
+# OS / IDE
+.DS_Store
+.idea/
+
 .cache
-build
+
+cmake-build-*/
+build*/
+
 .vscode
+
 src/TestFiles/hits_sample.csv
-src/TestFiles/scheme.csv
-src/TestFiles/output.mf
-src/TestFiles/data_output.csv
-src/TestFiles/schema_output.csv
+src/TestFiles/schema_sample.csv
+
+# Local generated test artifacts
+src/TestFiles/*.mf
+src/TestFiles/*_output.csv

@@ -1,2 +1,0 @@
-/Library/Developer/CommandLineTools/usr/bin/ar qc libexecutor.a CMakeFiles/executor.dir/executor.cpp.o CMakeFiles/executor.dir/operator.cpp.o
-/Library/Developer/CommandLineTools/usr/bin/ranlib libexecutor.a
