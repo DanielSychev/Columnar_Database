@@ -6,12 +6,14 @@
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/schema.h"
 
+using Row = std::vector<std::string>;
+
 class Batch {
 public:
     Batch(const Schema& schema, size_t batch_rows_count = Constants::BATCH_SIZE);
     explicit Batch(size_t batch_rows_count);
-    void AddRow(std::vector<std::string>&& row);
-    std::vector<std::string> GetRow(size_t row_index) const;
+    void AddRow(Row&& row);
+    Row GetRow(size_t row_index) const;
     void AddColumn(size_t column_index, std::vector<std::string>&& values);
     void AddColumn(size_t column_index, std::shared_ptr<Column> column);
     void AddColumn(std::shared_ptr<Column> column);

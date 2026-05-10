@@ -43,7 +43,7 @@ Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), ba
 Batch::Batch(size_t batch_rows_count) : batch_rows_count(batch_rows_count) {
 }
 
-void Batch::AddRow(std::vector<std::string>&& row) {
+void Batch::AddRow(Row&& row) {
     if (!has_schema) {
         throw std::runtime_error("cannot add rows to batch without schema");
     }
@@ -59,11 +59,11 @@ void Batch::AddRow(std::vector<std::string>&& row) {
     ++rows_count;
 }
 
-std::vector<std::string> Batch::GetRow(size_t row_index) const {
+Row Batch::GetRow(size_t row_index) const {
     if (row_index >= rows_count) {
         throw std::runtime_error("wrong row index");
     }
-    std::vector<std::string> row;
+    Row row;
     row.reserve(columns.size());
     for (const auto& column: columns) {
         row.push_back(column->GetElemToString(row_index));

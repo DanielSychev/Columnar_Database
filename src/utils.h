@@ -7,6 +7,7 @@
 namespace Constants {
     const size_t BATCH_SIZE = 100000;
     const size_t MAX_COLUMN_COUNT = UINT32_MAX;
+    const size_t ORDER_BY_LIMIT = 1000;
 }
 
 enum class CompareSign {
@@ -16,7 +17,8 @@ enum class CompareSign {
     GREATER,
     LESS_OR_EQUAL,
     GREATER_OR_EQUAL,
-    LIKE
+    LIKE,
+    NOT_LIKE
 };
 
 namespace concepts {

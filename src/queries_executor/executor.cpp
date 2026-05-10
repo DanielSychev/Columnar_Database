@@ -1,9 +1,11 @@
 #include "queries_executor/executor.h"
 #include "engine/data_storage/batch.h"
 // #include "engine/serialization/batch_serialization.h"
+#include "engine/data_storage/schema.h"
 #include "queries_executor/operator.h"
 #include "queries_executor/transform.h"
 #include "engine/data_storage/visitors/sort_visitor.h"
+#include <queue>
 #include <cstddef>
 #include <map>
 #include <memory>
@@ -276,34 +278,108 @@ public:
     }
 
     std::shared_ptr<Batch> NextBatch() override {
-        // полагаемся на то, что даётся один батч
-        size_t column_index = 0;
+        if (was_produced) {
+            return nullptr;
+        }
+        was_produced = true;
+
         auto batch = child_executor_->NextBatch();
         if (!batch) {
             return nullptr;
         }
-        if (auto type = batch->GetSchema().GetTypeAndPos(order_by_operator_->column_name); type.has_value()) {
-            column_index = type->second;
-        } else {
-            throw std::runtime_error("no such column in schema (in OrderByExecutor)");
+        descending = order_by_operator_->descending;
+        schema = batch->GetSchema();
+        for (auto& column_name: order_by_operator_->column_names) {
+            if (auto type = schema.GetTypeAndPos(column_name); type.has_value()) {
+                column_indices.push_back(type->second);
+            } else {
+                throw std::runtime_error("no such column in schema (in OrderByExecutor)");
+            }
         }
-        SortVisitor sort_visitor(batch->RowsCount(), order_by_operator_->descending);
-        batch->ColumnAt(column_index).Accept(sort_visitor);
-        size_t limit = order_by_operator_->limit;
-        if (limit == 0 || limit > batch->RowsCount()) {
-            limit = batch->RowsCount();
+        auto cmp = [this](const Row& left, const Row& right) {
+            return this->ComesBefore(left, right);
+        };
+        std::priority_queue<Row, std::vector<Row>, decltype(cmp)> heap(cmp);
+        const size_t limit = order_by_operator_->limit;
+        auto consume_batch = [&](const std::shared_ptr<Batch>& batch) {
+            for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
+                Row row = batch->GetRow(row_index);
+
+                if (heap.size() < limit) {
+                    heap.push(std::move(row));
+                    continue;
+                }
+
+                if (ComesBefore(row, heap.top())) {
+                    heap.pop();
+                    heap.push(std::move(row));
+                }
+            }
+        };
+        do {
+            consume_batch(batch);
+            batch = child_executor_->NextBatch();
+        } while (batch);
+        std::vector<Row> sorted_rows;
+        while (!heap.empty()) {
+            sorted_rows.push_back(std::move(heap.top()));
+            heap.pop();
         }
-        sort_visitor.order.resize(limit);
-        auto sorted_batch = std::make_shared<Batch>(batch->GetSchema(), limit);
-        for (size_t i = 0; i < batch->ColumnsCount(); ++i) {
-            sorted_batch->AddColumn(i, batch->ColumnAt(i).CopyReordered(sort_visitor.order));
+        std::reverse(sorted_rows.begin(), sorted_rows.end());
+        auto result_batch = std::make_shared<Batch>(schema, sorted_rows.size());
+        for (auto& row: sorted_rows) {
+            result_batch->AddRow(std::move(row));
         }
-        return sorted_batch; // считаем что подаётся один батч
+        return result_batch;
     }
 
 private:
+    int8_t CompareTypes(Type type, const std::string& left, const std::string& right) {
+        switch (type) {
+            case Type::int128: {
+                const auto a = column_detail::ParseInt128(left);
+                const auto b = column_detail::ParseInt128(right);
+                return (a < b ? -1 : (a > b ? 1 : 0));
+            }
+            case Type::int64: 
+            case Type::int32:
+            case Type::int16:
+            case Type::int8: {
+                auto a = std::stoll(std::string(left));
+                auto b = std::stoll(std::string(right));
+                return (a < b ? -1 : (a > b ? 1 : 0));
+            }
+            case Type::double_: {
+                auto a = std::stod(std::string(left));
+                auto b = std::stod(std::string(right));
+                return (a < b ? -1 : (a > b ? 1 : 0));
+            }
+            case Type::date:
+            case Type::timestamp:
+            case Type::str: {
+                return (left < right ? -1 : (left > right ? 1 : 0));
+            }
+            default:
+                throw std::runtime_error("unsupported type for comparison (in OrderByExecutor)");
+        }
+    }
+    bool ComesBefore(const Row& left, const Row& right) {
+        for (auto& i : column_indices) {
+            auto cmp = CompareTypes(schema.types[i], left[i], right[i]);
+            if (cmp != 0) {
+                return descending ? cmp > 0 : cmp < 0;
+            }
+        }
+        return false;
+    }
+
+
     std::shared_ptr<OrderByOperator> order_by_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
+    std::vector<size_t> column_indices;
+    bool descending;
+    Schema schema;
+    bool was_produced = false;
 };
 
 

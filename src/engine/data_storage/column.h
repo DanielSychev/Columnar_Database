@@ -226,8 +226,8 @@ public:
     }
 
     bool Compare(const std::string& elem, size_t index, CompareSign sign) const override {
-        if (sign == CompareSign::LIKE) {
-            throw std::invalid_argument("LIKE is supported only for string columns");
+        if (sign == CompareSign::LIKE || sign == CompareSign::NOT_LIKE) {
+            throw std::invalid_argument("LIKE and NOT_LIKE are supported only for string columns");
         }
         return column_detail::BasicCompare(data[index], column_detail::ParseNumeric<T>(elem), sign);
     }
