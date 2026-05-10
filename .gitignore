@@ -10,7 +10,7 @@ build*/
 .vscode
 
 src/TestFiles/hits_sample.csv
-src/TestFiles/scheme.csv
+src/TestFiles/schema_sample.csv
 
 # Local generated test artifacts
 src/TestFiles/*.mf

@@ -7,7 +7,7 @@
 #include <engine/data_storage/batch.h>
 #include <engine/engine.h>
 
-std::string schema_path = "//Users//mac//Columnar_Database//src//TestFiles//scheme.csv";
+std::string schema_path = "//Users//mac//Columnar_Database//src//TestFiles//schema_sample.csv";
 std::string schema_writer_path = "//Users//mac//Columnar_Database//src//TestFiles//schema_output.csv";
 std::string data_writer_path = "//Users//mac//Columnar_Database//src//TestFiles//output.mf";
 std::string data_path = "//Users//mac//Columnar_Database//src//TestFiles//hits_sample.csv";
