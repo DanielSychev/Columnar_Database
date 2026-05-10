@@ -1,5 +1,7 @@
 .cache
 build
+build-clickbench
+build-o3-native
 .vscode
 src/TestFiles/hits_sample.csv
 src/TestFiles/scheme.csv
