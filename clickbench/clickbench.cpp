@@ -300,6 +300,32 @@ std::shared_ptr<Operator> MakeQuery26() {
     return MakeOrderBy(filter, {"EventTime", "SearchPhrase"}, false, 10);
 }
 
+// SELECT CounterID, AVG(length(URL)) AS l, COUNT(*) AS c FROM hits WHERE URL <> '' GROUP BY CounterID HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;
+std::shared_ptr<Operator> MakeQuery27() {
+    std::vector<std::string> columns = {"CounterID", "URL"};
+    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto filter = MakeFilter(scanner, {"URL"}, {""}, {CompareSign::NOT_EQUAL});
+    auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<LengthTransform>("URL", "length(URL)")};
+    auto transform = std::make_shared<TransformsOperator>(filter, std::move(transforms));
+    auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<AvgAggregation>("length(URL)", "l"), std::make_shared<CountAggregation>("c")};
+    auto group_by = MakeGroupBy(transform, {"CounterID"}, aggregations);
+    auto having_filter = MakeFilter(group_by, {"c"}, {"100000"}, {CompareSign::GREATER});
+    return MakeOrderBy(having_filter, {"l"}, true, 25);
+}
+
+// SELECT REGEXP_REPLACE(Referer, '^https?://(?:www\.)?([^/]+)/.*$', '\1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;
+std::shared_ptr<Operator> MakeQuery28() {
+    std::vector<std::string> columns = {"Referer"};
+    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto filter = MakeFilter(scanner, {"Referer"}, {""}, {CompareSign::NOT_EQUAL});
+    auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<RegexpReplaceTransform>("Referer", "^https?://(?:www\\.)?([^/]+)/.*$", "$1", "k"), std::make_shared<LengthTransform>("Referer", "length(Referer)")};
+    auto transform = std::make_shared<TransformsOperator>(filter, std::move(transforms));
+    auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<AvgAggregation>("length(Referer)", "l"), std::make_shared<CountAggregation>("c"), std::make_shared<MinAggregation>("Referer")};
+    auto group_by = MakeGroupBy(transform, {"k"}, aggregations);
+    auto having_filter = MakeFilter(group_by, {"c"}, {"100000"}, {CompareSign::GREATER});
+    return MakeOrderBy(having_filter, {"l"}, true, 25);
+}
+
 int main() {
     MakeScanOperator();
     std::shared_ptr<Operator> queries[43];
@@ -330,8 +356,10 @@ int main() {
     queries[24] = MakeQuery24();
     queries[25] = MakeQuery25();
     queries[26] = MakeQuery26();
+    queries[27] = MakeQuery27();
+    queries[28] = MakeQuery28();
 
-    for (int i = 24; i < 27; ++i) {
+    for (int i = 28; i < 29; ++i) {
         auto executor = ExecuteOperator(queries[i]);
         std::ofstream result_stream("//Users//mac//Columnar_Database//src//TestFiles//result"+std::to_string(i)+".csv");
         Writer result_writer(result_stream);
