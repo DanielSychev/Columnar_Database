@@ -1,10 +1,17 @@
+# OS / IDE
+.DS_Store
+.idea/
+
 .cache
-build
-build-clickbench
-build-o3-native
+
+cmake-build-*/
+build*/
+
 .vscode
+
 src/TestFiles/hits_sample.csv
 src/TestFiles/scheme.csv
-src/TestFiles/output.mf
-src/TestFiles/data_output.csv
-src/TestFiles/schema_output.csv
+
+# Local generated test artifacts
+src/TestFiles/*.mf
+src/TestFiles/*_output.csv
