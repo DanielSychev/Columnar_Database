@@ -1,5 +1,4 @@
 #include "CsvMfReader/reader.h"
-#include <iostream>
 #include <stdexcept>
 // Reader::Reader(const std::string& filename, char delimetr) : delimetr_(delimetr) {
 //     file_ = new std::ifstream(filename);

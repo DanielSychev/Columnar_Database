@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 #include <type_traits>
 
 namespace Constants {
@@ -20,6 +21,12 @@ enum class CompareSign {
     LIKE,
     NOT_LIKE
 };
+
+enum class Type {
+    int128, int64, int32, int16, int8, double_, str, date, timestamp
+};
+
+std::string_view TypeToString(Type t);
 
 namespace concepts {
     template<typename T>

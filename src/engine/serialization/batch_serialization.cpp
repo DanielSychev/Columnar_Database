@@ -1,5 +1,4 @@
 #include "engine/serialization/batch_serialization.h"
-#include <stdexcept>
 #include <vector>
 
 namespace batch_serialization {

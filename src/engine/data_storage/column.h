@@ -251,7 +251,7 @@ public:
 
     ~NumericColumn() override = default;
 private:
-    static_assert(concepts_read::BinarySerializable<T>, "NumericColumn requires binary-serializable type");
+    static_assert(concepts::BinarySerializable<T>, "NumericColumn requires binary-serializable type");
     static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>, "NumericColumn requires numeric type");
 
     std::vector<T> data;

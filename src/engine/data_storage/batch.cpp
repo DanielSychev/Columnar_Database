@@ -34,9 +34,9 @@ std::shared_ptr<Column> CreateColumn(Type type) {
 
 Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), batch_rows_count(batch_rows_count) {
     has_schema = true;
-    columns.resize(schema.NumColums());
+    columns.resize(schema.NumColumns());
     for (size_t i = 0; i < columns.size(); ++i) {
-        columns[i] = CreateColumn(this->schema.types[i]);
+        columns[i] = CreateColumn(this->schema.ColumnTypeAt(i));
     }
 }
 

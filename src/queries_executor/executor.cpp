@@ -1,17 +1,27 @@
 #include "queries_executor/executor.h"
-#include "engine/data_storage/batch.h"
-// #include "engine/serialization/batch_serialization.h"
 #include "engine/data_storage/schema.h"
+#include "queries_executor/helpers.h"
 #include "queries_executor/operator.h"
 #include "queries_executor/transform.h"
-#include "engine/data_storage/visitors/sort_visitor.h"
-#include <queue>
+#include <algorithm>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <numeric>
+#include <queue>
 #include <stdexcept>
-#include <queries_executor/objects.h>
+#include <string>
+#include <string_view>
+
+namespace {
+std::shared_ptr<PipelineExecutor> CreateChildExecutor(const std::shared_ptr<Operator>& child, std::string_view context) {
+    auto child_executor = ExecuteOperator(child);
+    if (!child_executor) {
+        throw std::runtime_error("child executor is not set (in " + std::string(context) + ")");
+    }
+    return child_executor;
+}
+}
 
 class ScanExecutor : public PipelineExecutor {
 public:
@@ -31,14 +41,12 @@ public:
         }
         
         for (const auto& column_name: scan_operator_->column_names) {
-            if (auto type = basic_schema.GetTypeAndPos(column_name); type.has_value()) {
-                query_schema.AddColumn(column_name, type->first);
-                column_positions.push_back(type->second);
-            } else {
-                throw std::runtime_error("no such column in basic schema");
-            }
+            const auto [type, column_position] =
+                queries_executor_detail::ResolveColumn(basic_schema, column_name, "ScanExecutor");
+            query_schema.AddColumn(column_name, type);
+            column_positions.push_back(column_position);
         }
-        column_starts.resize(basic_schema.NumColums());
+        column_starts.resize(basic_schema.NumColumns());
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -55,7 +63,7 @@ public:
         // if (!batch_serialization::ReadMfBatch(*data_reader, *batch)) {
         //     throw std::runtime_error("wrong batch format");
         // }
-        for (size_t i = 0; i < query_schema.NumColums(); ++i) {
+        for (size_t i = 0; i < query_schema.NumColumns(); ++i) {
             data_reader->SetPos(column_starts[column_positions[i]]);
             Column& column = batch->ColumnAt(i);
             column.Read(*data_reader);
@@ -78,10 +86,7 @@ private:
 class FilterExecutor : public PipelineExecutor {
 public:
     FilterExecutor(std::shared_ptr<FilterOperator> filter_op) : filter_operator_(filter_op) {
-        child_executor_ = ExecuteOperator(filter_op->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(filter_op->child, "FilterExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -91,12 +96,12 @@ public:
         }
         std::vector<bool> banned(batch->RowsCount(), false);
         for (size_t i = 0; i < filter_operator_->column_names.size(); ++i) {
-            size_t column_index = 0;
-            if (auto type = batch->GetSchema().GetTypeAndPos(filter_operator_->column_names[i]); type.has_value()) {
-                column_index = type->second;
-            } else {
-                throw std::runtime_error("no such column in schema (in FilterExecutor)");
-            }
+            const auto [column_type, column_index] = queries_executor_detail::ResolveColumn(
+                batch->GetSchema(),
+                filter_operator_->column_names[i],
+                "FilterExecutor"
+            );
+            (void)column_type;
             for (size_t j = 0; j < batch->RowsCount(); ++j) {
                 if (!batch->ColumnAt(column_index).Compare(filter_operator_->values[i], j, filter_operator_->signs[i])) {
                     banned[j] = true;
@@ -117,10 +122,7 @@ private:
 class TransformExecutor : public PipelineExecutor {
 public:
     TransformExecutor(std::shared_ptr<TransformsOperator> transform_operator) : transform_operator_(std::move(transform_operator)) {
-        child_executor_ = ExecuteOperator(transform_operator_->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(transform_operator_->child, "TransformExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -145,10 +147,7 @@ private:
 class AggregateExecutor : public PipelineExecutor {
 public:
     AggregateExecutor(std::shared_ptr<AggregateOperator> aggregation_operator) : aggregation_operator_(aggregation_operator) {
-        child_executor_ = ExecuteOperator(aggregation_operator->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(aggregation_operator->child, "AggregateExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -180,10 +179,7 @@ private:
 class GroupByExecutor : public PipelineExecutor {
 public:
     GroupByExecutor(std::shared_ptr<GroupByOperator> group_by_operator) : group_by_operator_(group_by_operator) {
-        child_executor_ = ExecuteOperator(group_by_operator->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(group_by_operator_->child, "GroupByExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -196,12 +192,13 @@ public:
         while (auto batch = child_executor_->NextBatch()) {
             if (!filled_schema) {
                 for (const auto& column_name: group_by_operator_->group_by_columns) {
-                    if (auto type = batch->GetSchema().GetTypeAndPos(column_name); type.has_value()) {
-                        result_schema.AddColumn(column_name, type->first);
-                        group_by_positions.push_back(type->second);
-                    } else {
-                        throw std::runtime_error("no such column in basic schema (in GroupByExecutor)");
-                    }
+                    const auto [type, column_position] = queries_executor_detail::ResolveColumn(
+                        batch->GetSchema(),
+                        column_name,
+                        "GroupByExecutor"
+                    );
+                    result_schema.AddColumn(column_name, type);
+                    group_by_positions.push_back(column_position);
                 }
                 filled_schema = true;
             }
@@ -271,10 +268,7 @@ class OrderByExecutor : public PipelineExecutor {
 public:
 
     OrderByExecutor(std::shared_ptr<OrderByOperator> order_by_operator) : order_by_operator_(order_by_operator) {
-        child_executor_ = ExecuteOperator(order_by_operator->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(order_by_operator_->child, "OrderByExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -290,11 +284,10 @@ public:
         descending = order_by_operator_->descending;
         schema = batch->GetSchema();
         for (auto& column_name: order_by_operator_->column_names) {
-            if (auto type = schema.GetTypeAndPos(column_name); type.has_value()) {
-                column_indices.push_back(type->second);
-            } else {
-                throw std::runtime_error("no such column in schema (in OrderByExecutor)");
-            }
+            const auto [type, column_position] =
+                queries_executor_detail::ResolveColumn(schema, column_name, "OrderByExecutor");
+            (void)type;
+            column_indices.push_back(column_position);
         }
         auto cmp = [this](const Row& left, const Row& right) {
             return this->ComesBefore(left, right);
@@ -334,38 +327,14 @@ public:
     }
 
 private:
-    int8_t CompareTypes(Type type, const std::string& left, const std::string& right) {
-        switch (type) {
-            case Type::int128: {
-                const auto a = column_detail::ParseInt128(left);
-                const auto b = column_detail::ParseInt128(right);
-                return (a < b ? -1 : (a > b ? 1 : 0));
-            }
-            case Type::int64: 
-            case Type::int32:
-            case Type::int16:
-            case Type::int8: {
-                auto a = std::stoll(std::string(left));
-                auto b = std::stoll(std::string(right));
-                return (a < b ? -1 : (a > b ? 1 : 0));
-            }
-            case Type::double_: {
-                auto a = std::stod(std::string(left));
-                auto b = std::stod(std::string(right));
-                return (a < b ? -1 : (a > b ? 1 : 0));
-            }
-            case Type::date:
-            case Type::timestamp:
-            case Type::str: {
-                return (left < right ? -1 : (left > right ? 1 : 0));
-            }
-            default:
-                throw std::runtime_error("unsupported type for comparison (in OrderByExecutor)");
-        }
-    }
     bool ComesBefore(const Row& left, const Row& right) {
         for (auto& i : column_indices) {
-            auto cmp = CompareTypes(schema.types[i], left[i], right[i]);
+            const auto cmp = queries_executor_detail::CompareTypedValues(
+                schema.ColumnTypeAt(i),
+                left[i],
+                right[i],
+                "OrderByExecutor"
+            );
             if (cmp != 0) {
                 return descending ? cmp > 0 : cmp < 0;
             }
@@ -386,10 +355,7 @@ private:
 class LimitExecutor : public PipelineExecutor {
 public:
     LimitExecutor(std::shared_ptr<LimitOperator> limit_operator) : limit_operator_(limit_operator) {
-        child_executor_ = ExecuteOperator(limit_operator->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(limit_operator_->child, "LimitExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {

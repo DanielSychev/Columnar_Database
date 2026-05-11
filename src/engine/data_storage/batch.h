@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <vector>
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/schema.h"

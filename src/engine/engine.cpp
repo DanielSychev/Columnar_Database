@@ -1,6 +1,6 @@
 #include "engine/engine.h"
 #include "engine/serialization/batch_serialization.h"
-#include <iostream>
+#include <stdexcept>
 
 Engine::Engine(std::ifstream& data_reader_stream, std::ofstream& data_writer_stream, std::ifstream& schema_reader_stream) :
 data_reader(data_reader_stream), data_writer(data_writer_stream), type_reader(schema_reader_stream), type_writer(EMPTY_OUTPUT_STREAM) {}
@@ -23,13 +23,13 @@ void Engine::CsvToMfBatchProcessor(const Schema& schema) {
 void Engine::CsvToMfProcessor() {
     Schema schema;
     schema.ReadSchema(type_reader);
-    if (schema.NumColums() == 0) {
+    if (schema.NumColumns() == 0) {
         throw std::runtime_error("schema is empty or was not read");
     }
     CsvToMfBatchProcessor(schema);
 
     size_t pos = data_writer.TellPos(); // начинаем писать мету + пишем схему
-    data_writer.BinaryWrite(schema.NumColums());
+    data_writer.BinaryWrite(schema.NumColumns());
     schema.PrintSchema(data_writer);
     
     data_writer.BinaryWrite(batch_meta_positions.size()); // пишем количество батчей и позиции начал их меты

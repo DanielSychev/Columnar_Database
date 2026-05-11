@@ -9,11 +9,7 @@
 
 namespace {
 Schema MakeTestSchema() {
-    Schema schema;
-    schema.names = {"id", "name"};
-    schema.types = {Type::int64, Type::str};
-    schema.column_count = schema.names.size();
-    return schema;
+    return Schema({"id", "name"}, {Type::int64, Type::str});
 }
 }
 
@@ -61,6 +57,22 @@ TEST(BatchSerialization, CsvWriterUsesOnlyRealRowCount) {
     batch_serialization::WriteCsvBatch(batch, csv_writer);
 
     EXPECT_EQ(csv_output.str(), "1,Alice\n");
+}
+
+TEST(Schema, PreservesNarrowNumericTypes) {
+    std::stringstream schema_input;
+    schema_input << "small,int16\n";
+    schema_input << "medium,int32\n";
+    schema_input << "ratio,double\n";
+
+    Reader schema_reader(schema_input);
+    Schema schema;
+    schema.ReadSchema(schema_reader);
+
+    ASSERT_EQ(schema.NumColumns(), 3);
+    EXPECT_EQ(schema.GetTypeAndPos("small")->first, Type::int16);
+    EXPECT_EQ(schema.GetTypeAndPos("medium")->first, Type::int32);
+    EXPECT_EQ(schema.GetTypeAndPos("ratio")->first, Type::double_);
 }
 
 TEST(BatchSerialization, CanWriteSchemaLessBatchBuiltFromColumns) {
