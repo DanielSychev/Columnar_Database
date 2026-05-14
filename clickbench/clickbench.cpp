@@ -305,6 +305,7 @@ std::shared_ptr<Operator> MakeQuery28() {
 }
 
 int main() {
+    // Ready for review comment
     MakeDataPath();
     std::shared_ptr<Operator> queries[43];
     queries[0] = MakeQuery0();
