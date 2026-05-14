@@ -129,6 +129,29 @@ TEST(FilterExecutor, CopiesColumnsSkippingBannedRows) {
     EXPECT_EQ(executor->NextBatch(), nullptr);
 }
 
+TEST(FilterExecutor, SupportsInWithArbitraryCommaSeparatedValues) {
+    std::stringstream mf_stream = BuildMfStreamWithSingleBatch();
+
+    auto scan = std::make_shared<ScanOperator>(
+        mf_stream,
+        std::vector<std::string>{"id", "score"}
+    );
+    auto filter = MakeFilter(scan, {"score"}, {"999, 555, 20"}, {CompareSign::IN});
+    auto executor = ExecuteOperator(filter);
+
+    auto batch = executor->NextBatch();
+    ASSERT_NE(batch, nullptr);
+    EXPECT_EQ(batch->RowsCount(), 1);
+    EXPECT_EQ(batch->ColumnsCount(), 2);
+
+    std::stringstream csv_output;
+    Writer csv_writer(csv_output);
+    batch_serialization::WriteCsvBatch(*batch, csv_writer);
+
+    EXPECT_EQ(csv_output.str(), "2,20\n");
+    EXPECT_EQ(executor->NextBatch(), nullptr);
+}
+
 TEST(FilterExecutor, SupportsSqlLikeWildcards) {
     std::stringstream mf_stream = BuildMfStreamWithSingleBatch();
 
@@ -198,5 +221,97 @@ TEST(TransformExecutor, AppendsDerivedColumnsSequentially) {
     batch_serialization::WriteCsvBatch(*batch, csv_writer);
 
     EXPECT_EQ(csv_output.str(), "1,2013-07-15 09:28:29,28\n2,2013-07-15 13:51:09,51\n");
+    EXPECT_EQ(executor->NextBatch(), nullptr);
+}
+
+TEST(TransformExecutor, CaseWhenBuildsStringColumnFromColumnAndLiteral) {
+    std::stringstream mf_stream = BuildMfStreamWithSingleBatch();
+
+    auto scan = std::make_shared<ScanOperator>(
+        mf_stream,
+        std::vector<std::string>{"id", "name"}
+    );
+    auto transforms = std::vector<std::shared_ptr<Transform>>{
+        std::make_shared<CaseWhenTransform>(
+            std::vector<std::string>{"id"},
+            std::vector<std::string>{"1"},
+            std::vector<CompareSign>{CompareSign::EQUAL},
+            "name",
+            "",
+            "selected_name"
+        )
+    };
+    auto transform = std::make_shared<TransformsOperator>(scan, std::move(transforms));
+    auto executor = ExecuteOperator(transform);
+
+    auto batch = executor->NextBatch();
+    ASSERT_NE(batch, nullptr);
+    EXPECT_EQ(batch->RowsCount(), 2);
+    EXPECT_EQ(batch->ColumnsCount(), 3);
+
+    std::stringstream csv_output;
+    Writer csv_writer(csv_output);
+    batch_serialization::WriteCsvBatch(*batch, csv_writer);
+
+    EXPECT_EQ(csv_output.str(), "1,Alice,Alice\n2,Bob,\n");
+    EXPECT_EQ(executor->NextBatch(), nullptr);
+}
+
+TEST(TransformExecutor, CaseWhenBuildsNumericColumnFromStringValues) {
+    std::stringstream mf_stream = BuildMfStreamWithSingleBatch();
+
+    auto scan = std::make_shared<ScanOperator>(
+        mf_stream,
+        std::vector<std::string>{"id", "score"}
+    );
+    auto transforms = std::vector<std::shared_ptr<Transform>>{
+        std::make_shared<CaseWhenTransform>(
+            std::vector<std::string>{"id"},
+            std::vector<std::string>{"1"},
+            std::vector<CompareSign>{CompareSign::EQUAL},
+            "score",
+            "0",
+            "selected_score"
+        )
+    };
+    auto transform = std::make_shared<TransformsOperator>(scan, std::move(transforms));
+    auto executor = ExecuteOperator(transform);
+
+    auto batch = executor->NextBatch();
+    ASSERT_NE(batch, nullptr);
+    EXPECT_EQ(batch->RowsCount(), 2);
+    EXPECT_EQ(batch->ColumnsCount(), 3);
+
+    std::stringstream csv_output;
+    Writer csv_writer(csv_output);
+    batch_serialization::WriteCsvBatch(*batch, csv_writer);
+
+    EXPECT_EQ(csv_output.str(), "1,10,10\n2,20,0\n");
+    EXPECT_EQ(executor->NextBatch(), nullptr);
+}
+
+TEST(TransformExecutor, RenameAppendsAliasedColumnKeepingValues) {
+    std::stringstream mf_stream = BuildMfStreamWithSingleBatch();
+
+    auto scan = std::make_shared<ScanOperator>(
+        mf_stream,
+        std::vector<std::string>{"id", "name"}
+    );
+    auto transforms = std::vector<std::shared_ptr<Transform>>{
+        std::make_shared<RenameTransform>("name", "alias")
+    };
+    auto transform = std::make_shared<TransformsOperator>(scan, std::move(transforms));
+    auto executor = ExecuteOperator(transform);
+
+    auto batch = executor->NextBatch();
+    ASSERT_NE(batch, nullptr);
+    EXPECT_EQ(batch->RowsCount(), 2);
+    EXPECT_EQ(batch->ColumnsCount(), 3);
+
+    std::stringstream csv_output;
+    Writer csv_writer(csv_output);
+    batch_serialization::WriteCsvBatch(*batch, csv_writer);
+
+    EXPECT_EQ(csv_output.str(), "1,Alice,Alice\n2,Bob,Bob\n");
     EXPECT_EQ(executor->NextBatch(), nullptr);
 }

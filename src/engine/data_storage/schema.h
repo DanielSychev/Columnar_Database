@@ -21,7 +21,7 @@ struct Schema {
     const std::string& ColumnNameAt(size_t column_index) const;
     Type ColumnTypeAt(size_t column_index) const;
     std::optional<std::pair<Type, size_t>> GetTypeAndPos(const std::string& name) const;
-
+    bool HasColumn(const std::string& name) const;
 private:
     std::vector<std::string> names;
     std::vector<Type> types;

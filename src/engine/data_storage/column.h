@@ -7,10 +7,12 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <vector>
 #include "CsvMfReader/reader.h"
 #include "CsvMfWriter/writer.h"
 #include "engine/data_storage/visitors/visitor.h"
+#include "utils.h"
 
 class Column {
 public:
@@ -26,6 +28,9 @@ public:
     virtual size_t Size() const = 0;
     virtual ~Column() = default;
 };
+
+std::shared_ptr<Column> CreateColumn(Type type);
+std::shared_ptr<Column> CreateColumn(Type type, const std::vector<std::string>& values);
 
 namespace column_detail {
 template<typename T> 
@@ -162,6 +167,16 @@ T ParseNumeric(std::string_view value) {
 }
 
 template <typename T>
+std::vector<T> ParseNumericValues(const std::vector<std::string>& values) {
+    std::vector<T> parsed_values;
+    parsed_values.reserve(values.size());
+    for (const auto& value : values) {
+        parsed_values.push_back(ParseNumeric<T>(value));
+    }
+    return parsed_values;
+}
+
+template <typename T>
 void WriteNumericElem(Writer& writer, T value, bool is_last) {
     static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>, "NumericColumn requires numeric type");
 
@@ -182,6 +197,8 @@ class NumericColumn : public Column {
 public:
     NumericColumn() = default;
     NumericColumn(const std::vector<T>& data_) : data(data_) {}
+    explicit NumericColumn(const std::vector<std::string>& values)
+        : data(column_detail::ParseNumericValues<T>(values)) {}
 
     void AddElem(std::string&& value) override {
         data.push_back(column_detail::ParseNumeric<T>(value));
@@ -218,6 +235,34 @@ public:
     }
 
     bool Compare(const std::string& elem, size_t index, CompareSign sign) const override {
+        if (sign == CompareSign::IN) {
+            const std::string_view elem_view(elem);
+            size_t start = 0;
+            while (start <= elem_view.size()) {
+                const size_t comma_pos = elem_view.find(',', start);
+                std::string_view token = comma_pos == std::string_view::npos
+                    ? elem_view.substr(start)
+                    : elem_view.substr(start, comma_pos - start);
+
+                while (!token.empty() && (token.front() == ' ' || token.front() == '\t' || token.front() == '\n' || token.front() == '\r')) {
+                    token.remove_prefix(1);
+                }
+                while (!token.empty() && (token.back() == ' ' || token.back() == '\t' || token.back() == '\n' || token.back() == '\r')) {
+                    token.remove_suffix(1);
+                }
+                if (token.empty()) {
+                    throw std::invalid_argument("IN contains empty value");
+                }
+                if (data[index] == column_detail::ParseNumeric<T>(token)) {
+                    return true;
+                }
+                if (comma_pos == std::string_view::npos) {
+                    break;
+                }
+                start = comma_pos + 1;
+            }
+            return false;
+        }
         if (sign == CompareSign::LIKE || sign == CompareSign::NOT_LIKE) {
             throw std::invalid_argument("LIKE and NOT_LIKE are supported only for string columns");
         }
@@ -259,6 +304,7 @@ class StrColumn : public Column {
 public:
     StrColumn() = default;
     StrColumn(const std::vector<std::string>& data_) : data(data_) {}
+    StrColumn(std::vector<std::string>&& data_) : data(std::move(data_)) {}
     StrColumn(const StrColumn& other, const std::vector<bool>& banned);
     void AddElem(std::string&&) override;
     void Print(Writer&) const override;
@@ -280,6 +326,7 @@ class TimeStampColumn : public StrColumn {
 public:
     TimeStampColumn() = default;
     TimeStampColumn(const std::vector<std::string>& data_) : StrColumn(data_) {}
+    TimeStampColumn(std::vector<std::string>&& data_) : StrColumn(std::move(data_)) {}
     TimeStampColumn(const TimeStampColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     void Accept(ColumnVisitor& visitor) const override;
@@ -291,6 +338,7 @@ class DateColumn : public StrColumn {
 public:
     DateColumn() = default;
     DateColumn(const std::vector<std::string>& data_) : StrColumn(data_) {}
+    DateColumn(std::vector<std::string>&& data_) : StrColumn(std::move(data_)) {}
     DateColumn(const DateColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     void Accept(ColumnVisitor& visitor) const override;

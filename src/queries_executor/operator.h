@@ -64,11 +64,12 @@ struct GroupByOperator : public Operator {
 };
 
 struct OrderByOperator : public Operator {
-    OrderByOperator(std::shared_ptr<Operator> child_op, std::vector<std::string>&& column_names, bool descending = false, size_t limit = Constants::ORDER_BY_LIMIT);
+    OrderByOperator(std::shared_ptr<Operator> child_op, std::vector<std::string>&& column_names, bool descending = false, size_t limit = Constants::ORDER_BY_LIMIT, size_t offset = 0);
     virtual ~OrderByOperator() = default;
     std::vector<std::string> column_names;
     bool descending;
     size_t limit;
+    size_t offset;
 };
 
 struct LimitOperator : public Operator {

@@ -147,7 +147,7 @@ public:
 
         for (const auto& transform : transform_operator_->transforms) {
             const Type result_type = transform->ResultType(batch->GetSchema());
-            batch->AppendColumn(transform->result_name, result_type, transform->Apply(*batch));
+            batch->AppendColumn(transform->GetResultName(), result_type, transform->Apply(*batch));
         }
 
         return batch;
@@ -353,6 +353,7 @@ private:
     RowHeap ConsumeBatchesIntoHeap(std::shared_ptr<Batch> batch) {
         RowHeap heap(RowComparator{this});
         const size_t limit = order_by_operator_->limit;
+        const size_t offset = order_by_operator_->offset;
         if (limit == 0) {
             return heap;
         }
@@ -361,7 +362,7 @@ private:
             for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
                 Row row = batch->GetRow(row_index);
 
-                if (heap.size() < limit) {
+                if (heap.size() < limit + offset) {
                     heap.push(std::move(row));
                     continue;
                 }
@@ -380,9 +381,11 @@ private:
     }
 
     void BuildSortedRows(RowHeap& heap) {
-        while (!heap.empty()) {
+        size_t limit = order_by_operator_->limit;
+        while (!heap.empty() && limit > 0) {
             sorted_rows.push_back(std::move(heap.top()));
             heap.pop();
+            --limit;
         }
         std::reverse(sorted_rows.begin(), sorted_rows.end());
     }

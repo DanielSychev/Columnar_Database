@@ -126,3 +126,12 @@ std::optional<std::pair<Type, size_t>> Schema::GetTypeAndPos(const std::string& 
     }
     return std::nullopt;
 }
+
+bool Schema::HasColumn(const std::string& name) const {
+    for (size_t i = 0; i < column_count; ++i) {
+        if (names[i] == name) {
+            return true;
+        }
+    }
+    return false;
+}
