@@ -5,12 +5,6 @@ column_names(col_names) {
     type = OperatorType::SCAN;
 }
 
-// CountOperator::CountOperator(std::shared_ptr<Operator> child_op) {
-//     type = OperatorType::COUNT;
-//     child = child_op;
-// }
-
-
 FilterOperator::FilterOperator(std::shared_ptr<Operator> child_op, std::vector<std::string>&& column_names, std::vector<std::string>&& values, std::vector<CompareSign>&& signs) : column_names(std::move(column_names)), values(std::move(values)), signs(std::move(signs)) {
     type = OperatorType::FILTER;
     child = child_op;

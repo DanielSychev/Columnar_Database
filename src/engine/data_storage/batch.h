@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <vector>
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/schema.h"
@@ -29,6 +30,8 @@ public:
     bool Empty() const;
 
 private:
+    void ValidateColumnIndex(size_t column_index, size_t row_count) const;
+
     Schema schema;
     std::vector<std::shared_ptr<Column>> columns;
     size_t batch_rows_count;

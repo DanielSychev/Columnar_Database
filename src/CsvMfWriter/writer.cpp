@@ -1,4 +1,5 @@
 #include <CsvMfWriter/writer.h>
+#include <string>
 
 namespace {
 bool NeedsEscaping(std::string_view s, char delimiter) {

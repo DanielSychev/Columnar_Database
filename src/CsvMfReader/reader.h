@@ -1,16 +1,9 @@
 #pragma once
 
-#include <vector>
-#include <string>
+#include "utils.h"
 #include <istream>
-
-namespace concepts_read {
-    template<typename T>
-    concept BinarySerializable = 
-        std::is_integral_v<T> || 
-        std::is_same_v<T, float> || 
-        std::is_same_v<T, double>;
-};
+#include <string>
+#include <vector>
 
 class Reader {
 public:
@@ -24,12 +17,12 @@ public:
 
     size_t ReadLastBytes();
 
-    template<concepts_read::BinarySerializable T>
+    template<concepts::BinarySerializable T>
     void BinaryRead(T& value) {
         file_.read(reinterpret_cast<char*>(&value), sizeof(T));
     }
 
-    template<concepts_read::BinarySerializable T>
+    template<concepts::BinarySerializable T>
     void BinaryReadVector(std::vector<T>& values) {
         size_t count = 0;
         BinaryRead(count);

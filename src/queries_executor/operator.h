@@ -13,7 +13,6 @@ struct Transform;
 
 enum class OperatorType {
     SCAN,
-    // COUNT,
     FILTER,
     TRANSFORM,
     AGGREGATION,
@@ -29,8 +28,6 @@ struct Operator {
     std::shared_ptr<Operator> child;
 };
 
-// дальше различные операторы
-
 struct ScanOperator : public Operator {
     ScanOperator(std::istream& data_reader_stream, const std::vector<std::string>& col_names);
     virtual ~ScanOperator() = default;
@@ -38,11 +35,6 @@ struct ScanOperator : public Operator {
     Reader data_reader;
     std::vector<std::string> column_names;
 };
-
-// struct CountOperator : public Operator {
-//     CountOperator(std::shared_ptr<Operator> child_op);
-//     virtual ~CountOperator() = default;
-// };
 
 struct FilterOperator : public Operator {
     FilterOperator(std::shared_ptr<Operator> child_op, std::vector<std::string>&& column_names, std::vector<std::string>&& values, std::vector<CompareSign>&& signs);

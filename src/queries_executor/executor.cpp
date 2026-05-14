@@ -1,87 +1,97 @@
 #include "queries_executor/executor.h"
 #include "engine/data_storage/batch.h"
-// #include "engine/serialization/batch_serialization.h"
 #include "engine/data_storage/schema.h"
+#include "queries_executor/helpers.h"
 #include "queries_executor/operator.h"
 #include "queries_executor/transform.h"
-#include "engine/data_storage/visitors/sort_visitor.h"
-#include <queue>
+#include <algorithm>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <numeric>
+#include <queue>
 #include <stdexcept>
-#include <queries_executor/objects.h>
+#include <string>
+#include <string_view>
+
+namespace {
+std::shared_ptr<PipelineExecutor> CreateChildExecutor(const std::shared_ptr<Operator>& child, std::string_view context) {
+    auto child_executor = ExecuteOperator(child);
+    if (!child_executor) {
+        throw std::runtime_error("child executor is not set (in " + std::string(context) + ")");
+    }
+    return child_executor;
+}
+}
 
 class ScanExecutor : public PipelineExecutor {
 public:
     ScanExecutor(std::shared_ptr<ScanOperator> scan_op) : scan_operator_(std::move(scan_op)) {
         data_reader = &scan_operator_->data_reader;
-        size_t pos = data_reader->ReadLastBytes(); // позиция меты
-        
-        data_reader->SetPos(pos); // читаем схему
-        size_t column_count = 0;
-        data_reader->BinaryRead(column_count);
-        basic_schema.ReadSchema(*data_reader, column_count);
-        
-        data_reader->BinaryRead(batch_count);
-        batch_meta_positions.resize(batch_count);
-        for (size_t i = 0; i < batch_meta_positions.size(); ++i) {
-            data_reader->BinaryRead(batch_meta_positions[i]);
-        }
-        
-        for (const auto& column_name: scan_operator_->column_names) {
-            if (auto type = basic_schema.GetTypeAndPos(column_name); type.has_value()) {
-                query_schema.AddColumn(column_name, type->first);
-                column_positions.push_back(type->second);
-            } else {
-                throw std::runtime_error("no such column in basic schema");
-            }
-        }
-        column_starts.resize(basic_schema.NumColums());
+        ReadSchema();
+        ReadBatchMetaPositions();
+        BuildColumnPositionsAndStarts();
     }
 
     std::shared_ptr<Batch> NextBatch() override {
-        if (i >= batch_count) {
+        if (next_batch_index >= batch_count) {
             return nullptr;
         }
-        data_reader->SetPos(batch_meta_positions[i]);
-
+        data_reader->SetPos(batch_meta_positions[next_batch_index]);
         for (size_t column_index = 0; column_index < column_starts.size(); ++column_index) {
             data_reader->BinaryRead(column_starts[column_index]);
         }
 
-        auto batch = std::make_shared<Batch>(query_schema, batch_rows_count);
-        // if (!batch_serialization::ReadMfBatch(*data_reader, *batch)) {
-        //     throw std::runtime_error("wrong batch format");
-        // }
-        for (size_t i = 0; i < query_schema.NumColums(); ++i) {
+        auto batch = std::make_shared<Batch>(query_schema);
+        for (size_t i = 0; i < query_schema.NumColumns(); ++i) {
             data_reader->SetPos(column_starts[column_positions[i]]);
             Column& column = batch->ColumnAt(i);
             column.Read(*data_reader);
             batch->SetRowsCount(column.Size());
         }
-        ++i;
+        ++next_batch_index;
         return batch;
     }
 
 private:
+    void ReadSchema() {
+        size_t pos = data_reader->ReadLastBytes(); // позиция меты
+        data_reader->SetPos(pos); // читаем схему
+        size_t column_count = 0;
+        data_reader->BinaryRead(column_count);
+        basic_schema.ReadSchema(*data_reader, column_count);
+    }
+
+    void ReadBatchMetaPositions() {
+        data_reader->BinaryRead(batch_count);
+        batch_meta_positions.resize(batch_count);
+        for (size_t i = 0; i < batch_meta_positions.size(); ++i) {
+            data_reader->BinaryRead(batch_meta_positions[i]);
+        }
+    }
+
+    void BuildColumnPositionsAndStarts() {
+        for (const auto& column_name: scan_operator_->column_names) {
+            const auto [type, column_position] =
+                queries_executor_detail::ResolveColumn(basic_schema, column_name, "ScanExecutor");
+            query_schema.AddColumn(column_name, type);
+            column_positions.push_back(column_position);
+        }
+        column_starts.resize(basic_schema.NumColumns());
+    }
+
     std::shared_ptr<ScanOperator> scan_operator_;
     Reader* data_reader = nullptr;
     Schema basic_schema, query_schema;
     std::vector<size_t> column_positions, column_starts;
-    size_t batch_count, i = 0;
-    const size_t batch_rows_count = Constants::BATCH_SIZE;
+    size_t batch_count, next_batch_index = 0;
     std::vector<size_t> batch_meta_positions;
 };
 
 class FilterExecutor : public PipelineExecutor {
 public:
     FilterExecutor(std::shared_ptr<FilterOperator> filter_op) : filter_operator_(filter_op) {
-        child_executor_ = ExecuteOperator(filter_op->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(filter_op->child, "FilterExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -89,27 +99,36 @@ public:
         if (!batch) {
             return nullptr;
         }
-        std::vector<bool> banned(batch->RowsCount(), false);
+        BuildBanned(batch);
+        return BuildResultBatch(batch);
+    }
+private:
+    void BuildBanned(std::shared_ptr<Batch>& batch) {
+        banned.assign(batch->RowsCount(), false);
         for (size_t i = 0; i < filter_operator_->column_names.size(); ++i) {
-            size_t column_index = 0;
-            if (auto type = batch->GetSchema().GetTypeAndPos(filter_operator_->column_names[i]); type.has_value()) {
-                column_index = type->second;
-            } else {
-                throw std::runtime_error("no such column in schema (in FilterExecutor)");
-            }
+            const auto [column_type, column_index] = queries_executor_detail::ResolveColumn(
+                batch->GetSchema(),
+                filter_operator_->column_names[i],
+                "FilterExecutor"
+            );
+            (void)column_type;
             for (size_t j = 0; j < batch->RowsCount(); ++j) {
                 if (!batch->ColumnAt(column_index).Compare(filter_operator_->values[i], j, filter_operator_->signs[i])) {
                     banned[j] = true;
                 }
             }
         }
+    }
+
+    std::shared_ptr<Batch> BuildResultBatch(const std::shared_ptr<Batch>& batch) {
         auto new_batch = std::make_shared<Batch>(batch->GetSchema(), batch->RowsCount());
         for (size_t j = 0; j < batch->ColumnsCount(); ++j) {
             new_batch->AddColumn(j, batch->ColumnAt(j).CopyFiltered(banned));
         }
         return new_batch;
     }
-private:
+
+    std::vector<bool> banned;
     std::shared_ptr<FilterOperator> filter_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
 };
@@ -117,10 +136,7 @@ private:
 class TransformExecutor : public PipelineExecutor {
 public:
     TransformExecutor(std::shared_ptr<TransformsOperator> transform_operator) : transform_operator_(std::move(transform_operator)) {
-        child_executor_ = ExecuteOperator(transform_operator_->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(transform_operator_->child, "TransformExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -145,10 +161,7 @@ private:
 class AggregateExecutor : public PipelineExecutor {
 public:
     AggregateExecutor(std::shared_ptr<AggregateOperator> aggregation_operator) : aggregation_operator_(aggregation_operator) {
-        child_executor_ = ExecuteOperator(aggregation_operator->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(aggregation_operator->child, "AggregateExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -180,10 +193,7 @@ private:
 class GroupByExecutor : public PipelineExecutor {
 public:
     GroupByExecutor(std::shared_ptr<GroupByOperator> group_by_operator) : group_by_operator_(group_by_operator) {
-        child_executor_ = ExecuteOperator(group_by_operator->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(group_by_operator_->child, "GroupByExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -192,63 +202,17 @@ public:
         }
         was_produced = true;
 
-        bool filled_schema = false;
+        bool column_init = false;
         while (auto batch = child_executor_->NextBatch()) {
-            if (!filled_schema) {
-                for (const auto& column_name: group_by_operator_->group_by_columns) {
-                    if (auto type = batch->GetSchema().GetTypeAndPos(column_name); type.has_value()) {
-                        result_schema.AddColumn(column_name, type->first);
-                        group_by_positions.push_back(type->second);
-                    } else {
-                        throw std::runtime_error("no such column in basic schema (in GroupByExecutor)");
-                    }
-                }
-                filled_schema = true;
+            if (!column_init) {
+                InitializeGroupByColumns(batch);
+                column_init = true;
             }
-            
             std::map<GroupKey, std::shared_ptr<Batch>> group_batches;
-            for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
-                GroupKey current_group_key;
-                for (auto& column_index: group_by_positions) {
-                    current_group_key.values.push_back(batch->ColumnAt(column_index).GetElemToString(row_index));
-                }
-                if (group_batches.find(current_group_key) == group_batches.end()) {
-                    group_batches[current_group_key] = std::make_shared<Batch>(batch->GetSchema());
-                }
-                group_batches[current_group_key]->AddRow(batch->GetRow(row_index)); // копируем всё, а можно только те колонки, которые нужны для аггрегаций, но это сложнее реализовать
-            }
-            for (auto& [group_key, group_batch]: group_batches) {
-                auto& aggs = groups_aggs[group_key];
-                if (aggs.empty()) {
-                    for (const auto& aggr: group_by_operator_->aggs) {
-                        aggs.push_back(aggr->Clone());
-                    }
-                }
-                for (auto& aggr: aggs) {
-                    aggr->RunBatch(group_batch);
-                }
-            }
+            SplitBatchIntoGroups(group_batches, batch);
+            RunGroupAggregations(group_batches);
         }
-        filled_schema = false;
-        std::shared_ptr<Batch> result_batch;
-        for (auto& [group_key, aggs]: groups_aggs) {
-            std::vector<std::string> result_values;
-            for (const auto& value: group_key.values) {
-                result_values.push_back(value);
-            }
-            for (const auto& aggr: aggs) {
-                if (!filled_schema) {
-                    result_schema.AddColumn(aggr->result_name, aggr->GetResultType());
-                }
-                result_values.push_back(aggr->GetResultValue());
-            }
-            filled_schema = true;
-            if (!result_batch) {
-                result_batch = std::make_shared<Batch>(result_schema, groups_aggs.size());
-            }
-            result_batch->AddRow(std::move(result_values));
-        }
-        return result_batch;
+        return BuildResultBatch();
     }
 private:
     struct GroupKey {
@@ -258,6 +222,65 @@ private:
         }
     };
 
+    void InitializeGroupByColumns(const std::shared_ptr<Batch>& batch) {
+        for (const auto& column_name: group_by_operator_->group_by_columns) {
+            const auto [type, column_position] = queries_executor_detail::ResolveColumn(
+                batch->GetSchema(),
+                column_name,
+                "GroupByExecutor"
+            );
+            result_schema.AddColumn(column_name, type);
+            group_by_positions.push_back(column_position);
+        }
+    }
+
+    void SplitBatchIntoGroups(std::map<GroupKey, std::shared_ptr<Batch>>& group_batches, const std::shared_ptr<Batch>& batch) {
+        for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
+            GroupKey current_group_key;
+            for (auto& column_index: group_by_positions) {
+                current_group_key.values.push_back(batch->ColumnAt(column_index).GetElemToString(row_index));
+            }
+            if (group_batches.find(current_group_key) == group_batches.end()) {
+                group_batches[current_group_key] = std::make_shared<Batch>(batch->GetSchema());
+            }
+            group_batches[current_group_key]->AddRow(batch->GetRow(row_index)); // копируем всё, а можно только те колонки, которые нужны для аггрегаций, но это сложнее реализовать
+        }
+    }
+
+    void RunGroupAggregations(std::map<GroupKey, std::shared_ptr<Batch>>& group_batches) {
+        for (auto& [group_key, group_batch]: group_batches) {
+            auto& aggs = groups_aggs[group_key];
+            if (aggs.empty()) {
+                for (const auto& aggr: group_by_operator_->aggs) {
+                    aggs.push_back(aggr->Clone());
+                }
+            }
+            for (auto& aggr: aggs) {
+                aggr->RunBatch(group_batch);
+            }
+        }
+    }
+
+    std::shared_ptr<Batch> BuildResultBatch() {
+        std::shared_ptr<Batch> result_batch;
+        for (auto& [group_key, aggs]: groups_aggs) {
+            std::vector<std::string> result_values;
+            for (const auto& value: group_key.values) {
+                result_values.push_back(value);
+            }
+            for (const auto& aggr: aggs) {
+                if (result_schema.NumColumns() < group_by_positions.size() + aggs.size()) {
+                    result_schema.AddColumn(aggr->result_name, aggr->GetResultType());
+                }
+                result_values.push_back(aggr->GetResultValue());
+            }
+            if (!result_batch) {
+                result_batch = std::make_shared<Batch>(result_schema, groups_aggs.size());
+            }
+            result_batch->AddRow(std::move(result_values));
+        }
+        return result_batch;
+    }
 
     std::shared_ptr<GroupByOperator> group_by_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
@@ -271,10 +294,7 @@ class OrderByExecutor : public PipelineExecutor {
 public:
 
     OrderByExecutor(std::shared_ptr<OrderByOperator> order_by_operator) : order_by_operator_(order_by_operator) {
-        child_executor_ = ExecuteOperator(order_by_operator->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(order_by_operator_->child, "OrderByExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -287,20 +307,56 @@ public:
         if (!batch) {
             return nullptr;
         }
+        FindOrderColumns(batch);
+        auto heap = ConsumeBatchesIntoHeap(batch);
+        BuildSortedRows(heap);
+        return BuildResultBatch();
+    }
+
+private:
+    bool ComesBefore(const Row& left, const Row& right) const {
+        for (auto& i : column_indices) {
+            const auto cmp = queries_executor_detail::CompareTypedValues(
+                schema.ColumnTypeAt(i),
+                left[i],
+                right[i],
+                "OrderByExecutor"
+            );
+            if (cmp != 0) {
+                return descending ? cmp > 0 : cmp < 0;
+            }
+        }
+        return false;
+    }
+
+    struct RowComparator {
+        const OrderByExecutor* executor;
+
+        bool operator()(const Row& left, const Row& right) const {
+            return executor->ComesBefore(left, right);
+        }
+    };
+
+    using RowHeap = std::priority_queue<Row, std::vector<Row>, RowComparator>;
+
+    void FindOrderColumns(const std::shared_ptr<Batch>& batch) {
         descending = order_by_operator_->descending;
         schema = batch->GetSchema();
         for (auto& column_name: order_by_operator_->column_names) {
-            if (auto type = schema.GetTypeAndPos(column_name); type.has_value()) {
-                column_indices.push_back(type->second);
-            } else {
-                throw std::runtime_error("no such column in schema (in OrderByExecutor)");
-            }
+            const auto [type, column_position] =
+                queries_executor_detail::ResolveColumn(schema, column_name, "OrderByExecutor");
+            (void)type;
+            column_indices.push_back(column_position);
         }
-        auto cmp = [this](const Row& left, const Row& right) {
-            return this->ComesBefore(left, right);
-        };
-        std::priority_queue<Row, std::vector<Row>, decltype(cmp)> heap(cmp);
+    }
+
+    RowHeap ConsumeBatchesIntoHeap(std::shared_ptr<Batch> batch) {
+        RowHeap heap(RowComparator{this});
         const size_t limit = order_by_operator_->limit;
+        if (limit == 0) {
+            return heap;
+        }
+
         auto consume_batch = [&](const std::shared_ptr<Batch>& batch) {
             for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
                 Row row = batch->GetRow(row_index);
@@ -320,12 +376,18 @@ public:
             consume_batch(batch);
             batch = child_executor_->NextBatch();
         } while (batch);
-        std::vector<Row> sorted_rows;
+        return heap;
+    }
+
+    void BuildSortedRows(RowHeap& heap) {
         while (!heap.empty()) {
             sorted_rows.push_back(std::move(heap.top()));
             heap.pop();
         }
         std::reverse(sorted_rows.begin(), sorted_rows.end());
+    }
+
+    std::shared_ptr<Batch> BuildResultBatch() {
         auto result_batch = std::make_shared<Batch>(schema, sorted_rows.size());
         for (auto& row: sorted_rows) {
             result_batch->AddRow(std::move(row));
@@ -333,50 +395,10 @@ public:
         return result_batch;
     }
 
-private:
-    int8_t CompareTypes(Type type, const std::string& left, const std::string& right) {
-        switch (type) {
-            case Type::int128: {
-                const auto a = column_detail::ParseInt128(left);
-                const auto b = column_detail::ParseInt128(right);
-                return (a < b ? -1 : (a > b ? 1 : 0));
-            }
-            case Type::int64: 
-            case Type::int32:
-            case Type::int16:
-            case Type::int8: {
-                auto a = std::stoll(std::string(left));
-                auto b = std::stoll(std::string(right));
-                return (a < b ? -1 : (a > b ? 1 : 0));
-            }
-            case Type::double_: {
-                auto a = std::stod(std::string(left));
-                auto b = std::stod(std::string(right));
-                return (a < b ? -1 : (a > b ? 1 : 0));
-            }
-            case Type::date:
-            case Type::timestamp:
-            case Type::str: {
-                return (left < right ? -1 : (left > right ? 1 : 0));
-            }
-            default:
-                throw std::runtime_error("unsupported type for comparison (in OrderByExecutor)");
-        }
-    }
-    bool ComesBefore(const Row& left, const Row& right) {
-        for (auto& i : column_indices) {
-            auto cmp = CompareTypes(schema.types[i], left[i], right[i]);
-            if (cmp != 0) {
-                return descending ? cmp > 0 : cmp < 0;
-            }
-        }
-        return false;
-    }
-
-
     std::shared_ptr<OrderByOperator> order_by_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
     std::vector<size_t> column_indices;
+    std::vector<Row> sorted_rows;
     bool descending;
     Schema schema;
     bool was_produced = false;
@@ -386,10 +408,7 @@ private:
 class LimitExecutor : public PipelineExecutor {
 public:
     LimitExecutor(std::shared_ptr<LimitOperator> limit_operator) : limit_operator_(limit_operator) {
-        child_executor_ = ExecuteOperator(limit_operator->child);
-        if (!child_executor_) {
-            throw std::runtime_error("child executor is not set");
-        }
+        child_executor_ = CreateChildExecutor(limit_operator_->child, "LimitExecutor");
     }
 
     std::shared_ptr<Batch> NextBatch() override {
@@ -417,8 +436,6 @@ std::shared_ptr<PipelineExecutor> ExecuteOperator(std::shared_ptr<Operator> op) 
     switch (op->type) {
         case OperatorType::SCAN:
             return std::make_shared<ScanExecutor>(std::dynamic_pointer_cast<ScanOperator>(op));
-        // case OperatorType::COUNT:
-        //     return std::make_shared<CountExecutor>(std::dynamic_pointer_cast<CountOperator>(op));
         case OperatorType::FILTER:
             return std::make_shared<FilterExecutor>(std::dynamic_pointer_cast<FilterOperator>(op));
         case OperatorType::TRANSFORM:

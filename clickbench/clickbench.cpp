@@ -3,13 +3,21 @@
 #include "queries_executor/operator.h"
 #include "queries_executor/executor.h"
 #include "queries_executor/transform.h"
+#include <array>
 #include <fstream>
 #include <memory>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 std::unique_ptr<std::ifstream> data_stream;
-std::shared_ptr<ScanOperator> scanner;
+const std::string data_path = "src/TestFiles/output.mf";
+const std::string result_prefix = "src/TestFiles/result";
+const std::string result_suffix = ".csv";
+}
+
+auto MakeScan(std::vector<std::string>&& column_names) {
+    return std::make_shared<ScanOperator>(*data_stream, column_names);
 }
 
 auto MakeFilter(std::shared_ptr<Operator> child_op, std::vector<std::string>&& column_names, std::vector<std::string>&& values, std::vector<CompareSign>&& signs) {
@@ -24,8 +32,7 @@ auto MakeOrderBy(std::shared_ptr<Operator> child_op, std::vector<std::string>&& 
     return std::make_shared<OrderByOperator>(child_op, std::move(column_names), descending, limit);
 }
 
-void MakeScanOperator() {
-    std::string data_path = "//Users//mac//Columnar_Database//src//TestFiles//output.mf";
+void MakeDataPath() {
     data_stream = std::make_unique<std::ifstream>(data_path, std::ios::binary);
     if (!data_stream->is_open()) {
         throw std::runtime_error("cannot open data file: " + data_path);
@@ -34,66 +41,58 @@ void MakeScanOperator() {
 
 // SELECT COUNT(*) FROM hits;
 std::shared_ptr<Operator> MakeQuery0() {
-    std::vector<std::string> columns = {"AdvEngineID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"AdvEngineID"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>()};
-    return std::make_shared<AggregateOperator>(scanner, aggregations);
+    return std::make_shared<AggregateOperator>(scan, aggregations);
 }
 
 // SELECT COUNT(*) FROM hits WHERE AdvEngineID <> 0;
 std::shared_ptr<Operator> MakeQuery1() {
-    std::vector<std::string> columns = {"AdvEngineID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"AdvEngineID"}, {"0"}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"AdvEngineID"});
+    auto filter = MakeFilter(scan, {"AdvEngineID"}, {"0"}, {CompareSign::NOT_EQUAL});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>()};
     return std::make_shared<AggregateOperator>(filter, aggregations);
 }
 
 // SELECT SUM(AdvEngineID), COUNT(*), AVG(ResolutionWidth) FROM hits;
 std::shared_ptr<Operator> MakeQuery2() {
-    std::vector<std::string> columns = {"AdvEngineID", "ResolutionWidth"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"AdvEngineID", "ResolutionWidth"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<SumAggregation>("AdvEngineID"), std::make_shared<CountAggregation>(), std::make_shared<AvgAggregation>("ResolutionWidth")};
-    return std::make_shared<AggregateOperator>(scanner, aggregations);
+    return std::make_shared<AggregateOperator>(scan, aggregations);
 }
 
 // SELECT AVG(UserID) FROM hits;
 std::shared_ptr<Operator> MakeQuery3() {
-    std::vector<std::string> columns = {"UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"UserID"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<AvgAggregation>("UserID")};
-    return std::make_shared<AggregateOperator>(scanner, aggregations);
+    return std::make_shared<AggregateOperator>(scan, aggregations);
 }
 
 // SELECT COUNT(DISTINCT UserID) FROM hits;
 std::shared_ptr<Operator> MakeQuery4() {
-    std::vector<std::string> columns = {"UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"UserID"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountDistinctAggregation>("UserID")};
-    return std::make_shared<AggregateOperator>(scanner, aggregations);
+    return std::make_shared<AggregateOperator>(scan, aggregations);
 }
 
 // SELECT COUNT(DISTINCT SearchPhrase) FROM hits;
 std::shared_ptr<Operator> MakeQuery5() {
-    std::vector<std::string> columns = {"SearchPhrase"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"SearchPhrase"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountDistinctAggregation>("SearchPhrase")};
-    return std::make_shared<AggregateOperator>(scanner, aggregations);
+    return std::make_shared<AggregateOperator>(scan, aggregations);
 }
 
 // SELECT MIN(EventDate), MAX(EventDate) FROM hits;
 std::shared_ptr<Operator> MakeQuery6() {
-    std::vector<std::string> columns = {"EventDate"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"EventDate"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<MinAggregation>("EventDate"), std::make_shared<MaxAggregation>("EventDate")};
-    return std::make_shared<AggregateOperator>(scanner, aggregations);
+    return std::make_shared<AggregateOperator>(scan, aggregations);
 }
 
 // SELECT AdvEngineID, COUNT(*) FROM hits WHERE AdvEngineID <> 0 GROUP BY AdvEngineID  ORDER BY COUNT(*) DESC;
 std::shared_ptr<Operator> MakeQuery7() {
-    std::vector<std::string> columns = {"AdvEngineID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"AdvEngineID"}, {"0"}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"AdvEngineID"});
+    auto filter = MakeFilter(scan, {"AdvEngineID"}, {"0"}, {CompareSign::NOT_EQUAL});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>()};
     auto group_by = MakeGroupBy(filter, {"AdvEngineID"}, aggregations);
     return MakeOrderBy(group_by, {"COUNT(*)"}, true);
@@ -101,31 +100,28 @@ std::shared_ptr<Operator> MakeQuery7() {
 
 // SELECT RegionID, COUNT(DISTINCT UserID) AS u FROM hits GROUP BY RegionID ORDER BY u DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery8() {
-    std::vector<std::string> columns = {"RegionID", "UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"RegionID", "UserID"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountDistinctAggregation>("UserID", "u")};
-    auto group_by = MakeGroupBy(scanner, {"RegionID"}, aggregations);
+    auto group_by = MakeGroupBy(scan, {"RegionID"}, aggregations);
     return MakeOrderBy(group_by, {"u"}, true, 10);
 }
 
 // SELECT RegionID, SUM(AdvEngineID), COUNT(*) AS c, AVG(ResolutionWidth), COUNT(DISTINCT UserID) FROM hits GROUP BY RegionID ORDER BY c DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery9() {
-    std::vector<std::string> columns = {"RegionID", "AdvEngineID", "ResolutionWidth", "UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"RegionID", "AdvEngineID", "ResolutionWidth", "UserID"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{
         std::make_shared<SumAggregation>("AdvEngineID"), 
         std::make_shared<CountAggregation>("c"), 
         std::make_shared<AvgAggregation>("ResolutionWidth"), 
         std::make_shared<CountDistinctAggregation>("UserID")};
-    auto group_by = MakeGroupBy(scanner, {"RegionID"}, aggregations);
+    auto group_by = MakeGroupBy(scan, {"RegionID"}, aggregations);
     return MakeOrderBy(group_by, {"c"}, true, 10);
 }
 
 // SELECT MobilePhoneModel, COUNT(DISTINCT UserID) AS u FROM hits WHERE MobilePhoneModel <> '' GROUP BY MobilePhoneModel ORDER BY u DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery10() {
-    std::vector<std::string> columns = {"MobilePhoneModel", "UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"MobilePhoneModel"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"MobilePhoneModel", "UserID"});
+    auto filter = MakeFilter(scan, {"MobilePhoneModel"}, {""}, {CompareSign::NOT_EQUAL});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountDistinctAggregation>("UserID", "u")};
     auto group_by = MakeGroupBy(filter, {"MobilePhoneModel"}, aggregations);
     return MakeOrderBy(group_by, {"u"}, true, 10);
@@ -133,9 +129,8 @@ std::shared_ptr<Operator> MakeQuery10() {
 
 // SELECT MobilePhone, MobilePhoneModel, COUNT(DISTINCT UserID) AS u FROM hits WHERE MobilePhoneModel <> '' GROUP BY MobilePhone, MobilePhoneModel ORDER BY u DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery11() {
-    std::vector<std::string> columns = {"MobilePhone", "MobilePhoneModel", "UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"MobilePhoneModel"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"MobilePhone", "MobilePhoneModel", "UserID"});
+    auto filter = MakeFilter(scan, {"MobilePhoneModel"}, {""}, {CompareSign::NOT_EQUAL});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountDistinctAggregation>("UserID", "u")};
     auto group_by = MakeGroupBy(filter, {"MobilePhone", "MobilePhoneModel"}, aggregations);
     return MakeOrderBy(group_by, {"u"}, true, 10);
@@ -143,9 +138,8 @@ std::shared_ptr<Operator> MakeQuery11() {
 
 // SELECT SearchPhrase, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery12() {
-    std::vector<std::string> columns = {"SearchPhrase"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"SearchPhrase"});
+    auto filter = MakeFilter(scan, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("c")};
     auto group_by = MakeGroupBy(filter, {"SearchPhrase"}, aggregations);
     return MakeOrderBy(group_by, {"c"}, true, 10);
@@ -153,9 +147,8 @@ std::shared_ptr<Operator> MakeQuery12() {
 
 // SELECT SearchPhrase, COUNT(DISTINCT UserID) AS u FROM hits WHERE SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY u DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery13() {
-    std::vector<std::string> columns = {"SearchPhrase", "UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"SearchPhrase", "UserID"});
+    auto filter = MakeFilter(scan, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountDistinctAggregation>("UserID", "u")};
     auto group_by = MakeGroupBy(filter, {"SearchPhrase"}, aggregations);
     return MakeOrderBy(group_by, {"u"}, true, 10);
@@ -163,9 +156,8 @@ std::shared_ptr<Operator> MakeQuery13() {
 
 // SELECT SearchEngineID, SearchPhrase, COUNT(*) AS c FROM hits WHERE SearchPhrase <> '' GROUP BY SearchEngineID, SearchPhrase ORDER BY c DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery14() {
-    std::vector<std::string> columns = {"SearchEngineID", "SearchPhrase"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"SearchEngineID", "SearchPhrase"});
+    auto filter = MakeFilter(scan, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("c")};
     auto group_by = MakeGroupBy(filter, {"SearchEngineID", "SearchPhrase"}, aggregations);
     return MakeOrderBy(group_by, {"c"}, true, 10);
@@ -173,37 +165,33 @@ std::shared_ptr<Operator> MakeQuery14() {
 
 // SELECT UserID, COUNT(*) FROM hits GROUP BY UserID ORDER BY COUNT(*) DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery15() {
-    std::vector<std::string> columns = {"UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"UserID"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>()};
-    auto group_by = MakeGroupBy(scanner, {"UserID"}, aggregations);
+    auto group_by = MakeGroupBy(scan, {"UserID"}, aggregations);
     return MakeOrderBy(group_by, {"COUNT(*)"}, true, 10);
 }
 
 // SELECT UserID, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery16() {
-    std::vector<std::string> columns = {"UserID", "SearchPhrase"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"UserID", "SearchPhrase"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>()};
-    auto group_by = MakeGroupBy(scanner, {"UserID", "SearchPhrase"}, aggregations);
+    auto group_by = MakeGroupBy(scan, {"UserID", "SearchPhrase"}, aggregations);
     return MakeOrderBy(group_by, {"COUNT(*)"}, true, 10);
 }
 
 // SELECT UserID, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, SearchPhrase LIMIT 10;
 std::shared_ptr<Operator> MakeQuery17() {
-    std::vector<std::string> columns = {"UserID", "SearchPhrase"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"UserID", "SearchPhrase"});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>()};
-    auto group_by = MakeGroupBy(scanner, {"UserID", "SearchPhrase"}, aggregations);
+    auto group_by = MakeGroupBy(scan, {"UserID", "SearchPhrase"}, aggregations);
     return std::make_shared<LimitOperator>(group_by, 10);
 }
 
 // SELECT UserID, extract(minute FROM EventTime) AS m, SearchPhrase, COUNT(*) FROM hits GROUP BY UserID, m, SearchPhrase ORDER BY COUNT(*) DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery18() {
-    std::vector<std::string> columns = {"UserID", "EventTime", "SearchPhrase"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
+    auto scan = MakeScan({"UserID", "EventTime", "SearchPhrase"});
     auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<ExtractMinuteTransform>("EventTime", "m")};
-    auto transform = std::make_shared<TransformsOperator>(scanner, std::move(transforms));
+    auto transform = std::make_shared<TransformsOperator>(scan, std::move(transforms));
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>()};
     auto group_by = MakeGroupBy(transform, {"UserID", "m", "SearchPhrase"}, aggregations);
     return MakeOrderBy(group_by, {"COUNT(*)"}, true, 10);
@@ -211,26 +199,23 @@ std::shared_ptr<Operator> MakeQuery18() {
 
 // SELECT UserID FROM hits WHERE UserID = 435090932899640449;
 std::shared_ptr<Operator> MakeQuery19() {
-    std::vector<std::string> columns = {"UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"UserID"}, {"435090932899640449"}, {CompareSign::EQUAL});
+    auto scan = MakeScan({"UserID"});
+    auto filter = MakeFilter(scan, {"UserID"}, {"435090932899640449"}, {CompareSign::EQUAL});
     return filter;
 }
 
 // SELECT COUNT(*) FROM hits WHERE URL LIKE '%google%';
 std::shared_ptr<Operator> MakeQuery20() {
-    std::vector<std::string> columns = {"URL"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"URL"}, {"%google%"}, {CompareSign::LIKE});
+    auto scan = MakeScan({"URL"});
+    auto filter = MakeFilter(scan, {"URL"}, {"%google%"}, {CompareSign::LIKE});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>()};
     return std::make_shared<AggregateOperator>(filter, aggregations);
 }
 
 // SELECT SearchPhrase, MIN(URL), COUNT(*) AS c FROM hits WHERE URL LIKE '%google%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery21() {
-    std::vector<std::string> columns = {"URL", "SearchPhrase"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"URL", "SearchPhrase"}, {"%google%", ""}, {CompareSign::LIKE, CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"URL", "SearchPhrase"});
+    auto filter = MakeFilter(scan, {"URL", "SearchPhrase"}, {"%google%", ""}, {CompareSign::LIKE, CompareSign::NOT_EQUAL});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<MinAggregation>("URL"), std::make_shared<CountAggregation>("c")};
     auto group_by = MakeGroupBy(filter, {"SearchPhrase"}, aggregations);
     return MakeOrderBy(group_by, {"c"}, true, 10);
@@ -238,9 +223,8 @@ std::shared_ptr<Operator> MakeQuery21() {
 
 // SELECT SearchPhrase, MIN(URL), MIN(Title), COUNT(*) AS c, COUNT(DISTINCT UserID) FROM hits WHERE Title LIKE '%Google%' AND URL NOT LIKE '%.google.%' AND SearchPhrase <> '' GROUP BY SearchPhrase ORDER BY c DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery22() {
-    std::vector<std::string> columns = {"URL", "Title", "SearchPhrase", "UserID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"Title", "URL", "SearchPhrase"}, {"%Google%", "%.google.%", ""}, {CompareSign::LIKE, CompareSign::NOT_LIKE, CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"URL", "Title", "SearchPhrase", "UserID"});
+    auto filter = MakeFilter(scan, {"Title", "URL", "SearchPhrase"}, {"%Google%", "%.google.%", ""}, {CompareSign::LIKE, CompareSign::NOT_LIKE, CompareSign::NOT_EQUAL});
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{
         std::make_shared<MinAggregation>("URL"), 
         std::make_shared<MinAggregation>("Title"), 
@@ -252,7 +236,7 @@ std::shared_ptr<Operator> MakeQuery22() {
 
 // SELECT * FROM hits WHERE URL LIKE '%google%' ORDER BY EventTime LIMIT 10;
 std::shared_ptr<Operator> MakeQuery23() {
-    std::vector<std::string> columns = {
+    auto scan = MakeScan({
         "WatchID", "JavaEnable", "Title", "GoodEvent", "EventTime", "EventDate", "CounterID", "ClientIP",
         "RegionID", "UserID", "CounterClass", "OS", "UserAgent", "URL", "Referer", "IsRefresh",
         "RefererCategoryID", "RefererRegionID", "URLCategoryID", "URLRegionID", "ResolutionWidth",
@@ -270,41 +254,36 @@ std::shared_ptr<Operator> MakeQuery23() {
         "SocialSourceNetworkID", "SocialSourcePage", "ParamPrice", "ParamOrderID", "ParamCurrency",
         "ParamCurrencyID", "OpenstatServiceName", "OpenstatCampaignID", "OpenstatAdID",
         "OpenstatSourceID", "UTMSource", "UTMMedium", "UTMCampaign", "UTMContent", "UTMTerm",
-        "FromTag", "HasGCLID", "RefererHash", "URLHash", "CLID"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"URL"}, {"%google%"}, {CompareSign::LIKE});
+        "FromTag", "HasGCLID", "RefererHash", "URLHash", "CLID"});
+    auto filter = MakeFilter(scan, {"URL"}, {"%google%"}, {CompareSign::LIKE});
     return MakeOrderBy(filter, {"EventTime"}, false, 10);
 }
 
 // SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime LIMIT 10;
 std::shared_ptr<Operator> MakeQuery24() {
-    std::vector<std::string> columns = {"SearchPhrase", "EventTime"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"SearchPhrase", "EventTime"});
+    auto filter = MakeFilter(scan, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
     return MakeOrderBy(filter, {"EventTime"}, false, 10);
 }
 
 // SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY SearchPhrase LIMIT 10;
 std::shared_ptr<Operator> MakeQuery25() {
-    std::vector<std::string> columns = {"SearchPhrase"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"SearchPhrase"});
+    auto filter = MakeFilter(scan, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
     return MakeOrderBy(filter, {"SearchPhrase"}, false, 10);
 }
 
 // SELECT SearchPhrase FROM hits WHERE SearchPhrase <> '' ORDER BY EventTime, SearchPhrase LIMIT 10;
 std::shared_ptr<Operator> MakeQuery26() {
-    std::vector<std::string> columns = {"SearchPhrase", "EventTime"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"SearchPhrase", "EventTime"});
+    auto filter = MakeFilter(scan, {"SearchPhrase"}, {""}, {CompareSign::NOT_EQUAL});
     return MakeOrderBy(filter, {"EventTime", "SearchPhrase"}, false, 10);
 }
 
 // SELECT CounterID, AVG(length(URL)) AS l, COUNT(*) AS c FROM hits WHERE URL <> '' GROUP BY CounterID HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;
 std::shared_ptr<Operator> MakeQuery27() {
-    std::vector<std::string> columns = {"CounterID", "URL"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"URL"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"CounterID", "URL"});
+    auto filter = MakeFilter(scan, {"URL"}, {""}, {CompareSign::NOT_EQUAL});
     auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<LengthTransform>("URL", "length(URL)")};
     auto transform = std::make_shared<TransformsOperator>(filter, std::move(transforms));
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<AvgAggregation>("length(URL)", "l"), std::make_shared<CountAggregation>("c")};
@@ -315,9 +294,8 @@ std::shared_ptr<Operator> MakeQuery27() {
 
 // SELECT REGEXP_REPLACE(Referer, '^https?://(?:www\.)?([^/]+)/.*$', '\1') AS k, AVG(length(Referer)) AS l, COUNT(*) AS c, MIN(Referer) FROM hits WHERE Referer <> '' GROUP BY k HAVING COUNT(*) > 100000 ORDER BY l DESC LIMIT 25;
 std::shared_ptr<Operator> MakeQuery28() {
-    std::vector<std::string> columns = {"Referer"};
-    scanner = std::make_shared<ScanOperator>(*data_stream, columns);
-    auto filter = MakeFilter(scanner, {"Referer"}, {""}, {CompareSign::NOT_EQUAL});
+    auto scan = MakeScan({"Referer"});
+    auto filter = MakeFilter(scan, {"Referer"}, {""}, {CompareSign::NOT_EQUAL});
     auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<RegexpReplaceTransform>("Referer", "^https?://(?:www\\.)?([^/]+)/.*$", "$1", "k"), std::make_shared<LengthTransform>("Referer", "length(Referer)")};
     auto transform = std::make_shared<TransformsOperator>(filter, std::move(transforms));
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<AvgAggregation>("length(Referer)", "l"), std::make_shared<CountAggregation>("c"), std::make_shared<MinAggregation>("Referer")};
@@ -327,7 +305,7 @@ std::shared_ptr<Operator> MakeQuery28() {
 }
 
 int main() {
-    MakeScanOperator();
+    MakeDataPath();
     std::shared_ptr<Operator> queries[43];
     queries[0] = MakeQuery0();
     queries[1] = MakeQuery1();
@@ -359,9 +337,9 @@ int main() {
     queries[27] = MakeQuery27();
     queries[28] = MakeQuery28();
 
-    for (int i = 28; i < 29; ++i) {
+    for (size_t i = 1; i < 10; ++i) {
         auto executor = ExecuteOperator(queries[i]);
-        std::ofstream result_stream("//Users//mac//Columnar_Database//src//TestFiles//result"+std::to_string(i)+".csv");
+        std::ofstream result_stream(result_prefix + std::to_string(i) + result_suffix);
         Writer result_writer(result_stream);
         while (auto batch = executor->NextBatch()) {
             batch_serialization::WriteCsvBatch(*batch, result_writer);

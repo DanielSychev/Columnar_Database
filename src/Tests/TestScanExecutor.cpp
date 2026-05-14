@@ -32,7 +32,7 @@ std::stringstream BuildMfStreamWithSingleBatch() {
     const size_t batch_meta_position = batch_serialization::WriteMfBatch(batch, writer);
     const size_t footer_position = writer.TellPos();
 
-    writer.BinaryWrite(schema.NumColums());
+    writer.BinaryWrite(schema.NumColumns());
     schema.PrintSchema(writer);
     writer.BinaryWrite(static_cast<size_t>(1));
     writer.BinaryWrite(batch_meta_position);
@@ -53,7 +53,7 @@ std::stringstream BuildMfStreamWithLikeBatch() {
     const size_t batch_meta_position = batch_serialization::WriteMfBatch(batch, writer);
     const size_t footer_position = writer.TellPos();
 
-    writer.BinaryWrite(schema.NumColums());
+    writer.BinaryWrite(schema.NumColumns());
     schema.PrintSchema(writer);
     writer.BinaryWrite(static_cast<size_t>(1));
     writer.BinaryWrite(batch_meta_position);
@@ -74,7 +74,7 @@ std::stringstream BuildMfStreamWithTimestampBatch() {
     const size_t batch_meta_position = batch_serialization::WriteMfBatch(batch, writer);
     const size_t footer_position = writer.TellPos();
 
-    writer.BinaryWrite(schema.NumColums());
+    writer.BinaryWrite(schema.NumColumns());
     schema.PrintSchema(writer);
     writer.BinaryWrite(static_cast<size_t>(1));
     writer.BinaryWrite(batch_meta_position);

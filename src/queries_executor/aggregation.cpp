@@ -1,5 +1,6 @@
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/visitors/numeric_visitor.h"
+#include "queries_executor/helpers.h"
 #include <queries_executor/aggregation.h>
 #include <stdexcept>
 
@@ -41,16 +42,12 @@ void SumAggregation::RunBatch(std::shared_ptr<Batch> batch) {
         // throw std::runtime_error("expected batch");
         return;
     }
-    size_t column_index;
-    if (auto type = batch->GetSchema().GetTypeAndPos(column_name); type.has_value()) {
-        if (!input_type.has_value()) {
-            input_type = type->first;
-        } else if (input_type.value() != type->first) {
-            throw std::runtime_error("sum aggregation got different column types across batches");
-        }
-        column_index = type->second;
-    } else {
-        throw std::runtime_error("no such column in schema");
+    const auto [column_type, column_index] =
+        queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "SumAggregation");
+    if (!input_type.has_value()) {
+        input_type = column_type;
+    } else if (input_type.value() != column_type) {
+        throw std::runtime_error("sum aggregation got different column types across batches");
     }
     batch->ColumnAt(column_index).Accept(visitor);
 }
@@ -86,16 +83,12 @@ void AvgAggregation::RunBatch(std::shared_ptr<Batch> batch) {
         // throw std::runtime_error("expected batch");
         return;
     }
-    size_t column_index;
-    if (auto type = batch->GetSchema().GetTypeAndPos(column_name); type.has_value()) {
-        if (!input_type.has_value()) {
-            input_type = type->first;
-        } else if (input_type.value() != type->first) {
-            throw std::runtime_error("avg aggregation got different column types across batches");
-        }
-        column_index = type->second;
-    } else {
-        throw std::runtime_error("no such column in schema");
+    const auto [column_type, column_index] =
+        queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "AvgAggregation");
+    if (!input_type.has_value()) {
+        input_type = column_type;
+    } else if (input_type.value() != column_type) {
+        throw std::runtime_error("avg aggregation got different column types across batches");
     }
     batch->ColumnAt(column_index).Accept(visitor);
 }
@@ -124,12 +117,12 @@ void CountDistinctAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     if (!batch) {
         return;
     }
-    size_t column_index;
-    if (auto type = batch->GetSchema().GetTypeAndPos(column_name); type.has_value()) {
-        column_index = type->second;
-    } else {
-        throw std::runtime_error("no such column in schema");
-    }
+    const auto [column_type, column_index] = queries_executor_detail::ResolveColumn(
+        batch->GetSchema(),
+        column_name,
+        "CountDistinctAggregation"
+    );
+    (void)column_type;
     auto& column = batch->ColumnAt(column_index);
     for (size_t i = 0; i < batch->RowsCount(); ++i) {
         distinct_values.insert(column.GetElemToString(i));
@@ -161,18 +154,14 @@ void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch) {
         // throw std::runtime_error("expected batch");
         return;
     }
-    size_t column_index;
-    if (auto type = batch->GetSchema().GetTypeAndPos(column_name); type.has_value()) {
-        if (!input_type.has_value()) {
-            input_type = type->first;
-        } else if (input_type.value() != type->first) {
-            throw std::runtime_error("max aggregation got different column types across batches");
-        }
-        column_index = type->second;
-    } else {
-        throw std::runtime_error("no such column in schema");
+    const auto [column_type, column_index] =
+        queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "MaxAggregation");
+    if (!input_type.has_value()) {
+        input_type = column_type;
+    } else if (input_type.value() != column_type) {
+        throw std::runtime_error("max aggregation got different column types across batches");
     }
-    if (input_type.value() == Type::date || input_type.value() == Type::timestamp) {
+    if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
         batch->ColumnAt(column_index).Accept(date_visitor);
         return;
     }
@@ -180,7 +169,7 @@ void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch) {
 }
 
 std::string MaxAggregation::GetResultValue() const {
-    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp)) {
+    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str)) {
         return std::string(date_visitor.Max());
     }
 
@@ -188,7 +177,7 @@ std::string MaxAggregation::GetResultValue() const {
 }
 
 Type MaxAggregation::GetResultType() const {
-    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp)) {
+    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str)) {
         return input_type.value();
     }
     return Type::int64;
@@ -211,16 +200,12 @@ void MinAggregation::RunBatch(std::shared_ptr<Batch> batch) {
         // throw std::runtime_error("expected batch");
         return;
     }
-    size_t column_index;
-    if (auto type = batch->GetSchema().GetTypeAndPos(column_name); type.has_value()) {
-        if (!input_type.has_value()) {
-            input_type = type->first;
-        } else if (input_type.value() != type->first) {
-            throw std::runtime_error("min aggregation got different column types across batches");
-        }
-        column_index = type->second;
-    } else {
-        throw std::runtime_error("no such column in schema");
+    const auto [column_type, column_index] =
+        queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "MinAggregation");
+    if (!input_type.has_value()) {
+        input_type = column_type;
+    } else if (input_type.value() != column_type) {
+        throw std::runtime_error("min aggregation got different column types across batches");
     }
     if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
         batch->ColumnAt(column_index).Accept(date_visitor);

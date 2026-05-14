@@ -8,14 +8,8 @@ target_link_libraries(test_writer writer GTest::gtest_main)
 target_include_directories(test_writer PUBLIC ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME test_writer COMMAND test_writer)
 
-add_executable(test_batch_serialization
-    TestBatchSerialization.cpp
-    ../engine/data_storage/schema.cpp
-    ../engine/data_storage/batch.cpp
-    ../engine/data_storage/column.cpp
-    ../engine/serialization/batch_serialization.cpp
-)
-target_link_libraries(test_batch_serialization reader writer GTest::gtest_main)
+add_executable(test_batch_serialization TestBatchSerialization.cpp)
+target_link_libraries(test_batch_serialization engine GTest::gtest_main)
 target_include_directories(test_batch_serialization PUBLIC ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME test_batch_serialization COMMAND test_batch_serialization)
 

@@ -1,6 +1,5 @@
 #pragma once
 
-// #include "engine/data_storage/schema.h"
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -12,11 +11,6 @@
 #include "CsvMfReader/reader.h"
 #include "CsvMfWriter/writer.h"
 #include "engine/data_storage/visitors/visitor.h"
-
-// template <typename T>
-// void PrintElem(Writer& w, const std::vector<T>& v, size_t ind) {
-//     w.WriteElem(v[ind]);
-// }
 
 class Column {
 public:
@@ -188,8 +182,6 @@ class NumericColumn : public Column {
 public:
     NumericColumn() = default;
     NumericColumn(const std::vector<T>& data_) : data(data_) {}
-    // NumericColumn(const NumericColumn& other, const std::vector<bool>& banned) :
-    // data(column_detail::CopyAllowedValues(other.data, banned)) {}
 
     void AddElem(std::string&& value) override {
         data.push_back(column_detail::ParseNumeric<T>(value));
@@ -233,7 +225,6 @@ public:
     }
 
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override {
-        // return std::make_shared<NumericColumn<T>>(*this, banned);
         return std::make_shared<NumericColumn<T>>(column_detail::CopyAllowedValues(data, banned));
     }
 
@@ -251,7 +242,7 @@ public:
 
     ~NumericColumn() override = default;
 private:
-    static_assert(concepts_read::BinarySerializable<T>, "NumericColumn requires binary-serializable type");
+    static_assert(concepts::BinarySerializable<T>, "NumericColumn requires binary-serializable type");
     static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>, "NumericColumn requires numeric type");
 
     std::vector<T> data;
@@ -306,16 +297,3 @@ public:
     ~DateColumn() override = default;
 private:
 };
-
-// template <
-// void Execute(Column& c, ) {
-//     switch (c.column_type) {
-//         case Type::int64:
-
-//             break;
-//         case Type::str:
-//             break;
-//         default:
-//             throw std::runtime_error("another type");
-//     }
-// }

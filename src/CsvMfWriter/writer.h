@@ -2,6 +2,7 @@
 
 #include <ostream>
 #include <string_view>
+#include <vector>
 #include <utils.h>
 
 class Writer {
