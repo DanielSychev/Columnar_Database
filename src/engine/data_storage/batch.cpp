@@ -27,7 +27,7 @@ std::shared_ptr<Column> CreateColumn(Type type) {
     case Type::timestamp:
         return std::make_shared<TimeStampColumn>();
     default:
-        return std::make_shared<StrColumn>();
+        throw std::runtime_error("unknown type was given (in CreateColumn)");
     }
 }
 }
@@ -72,18 +72,7 @@ Row Batch::GetRow(size_t row_index) const {
 }
 
 void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
-    if (!has_schema) {
-        throw std::runtime_error("cannot add indexed column to batch without schema");
-    }
-    if (column_index >= columns.size()) {
-        throw std::runtime_error("wrong column index");
-    }
-    if (columns[column_index]->Size() != 0) {
-        throw std::runtime_error("column is already filled");
-    }
-    if (values.size() > batch_rows_count) {
-        throw std::runtime_error("wrong batch format");
-    }
+    ValidateColumnIndex(column_index, values.size());
 
     SetRowsCount(values.size());
 
@@ -93,18 +82,10 @@ void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
 }
 
 void Batch::AddColumn(size_t column_index, std::shared_ptr<Column> column) {
-    if (!has_schema) {
-        throw std::runtime_error("cannot add indexed column to batch without schema");
-    }
-    if (column_index >= columns.size()) {
-        throw std::runtime_error("wrong column index");
-    }
     if (!column) {
         throw std::runtime_error("column is null");
     }
-    if (columns[column_index]->Size() != 0) {
-        throw std::runtime_error("column is already filled");
-    }
+    ValidateColumnIndex(column_index, column->Size());
 
     SetRowsCount(column->Size());
     columns[column_index] = std::move(column);
@@ -187,4 +168,19 @@ size_t Batch::MaxRowsCount() const {
 
 bool Batch::Empty() const {
     return rows_count == 0;
+}
+
+void Batch::ValidateColumnIndex(size_t column_index, size_t row_count) const {
+    if (!has_schema) {
+        throw std::runtime_error("cannot add indexed column to batch without schema");
+    }
+    if (column_index >= columns.size()) {
+        throw std::runtime_error("wrong column index");
+    }
+    if (columns[column_index]->Size() != 0) {
+        throw std::runtime_error("column is already filled");
+    }
+    if (row_count > batch_rows_count) {
+        throw std::runtime_error("too many rows for batch");
+    }
 }

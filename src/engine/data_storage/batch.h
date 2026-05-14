@@ -30,6 +30,8 @@ public:
     bool Empty() const;
 
 private:
+    void ValidateColumnIndex(size_t column_index, size_t row_count) const;
+
     Schema schema;
     std::vector<std::shared_ptr<Column>> columns;
     size_t batch_rows_count;
