@@ -383,8 +383,6 @@ std::shared_ptr<PipelineExecutor> ExecuteOperator(std::shared_ptr<Operator> op) 
     switch (op->type) {
         case OperatorType::SCAN:
             return std::make_shared<ScanExecutor>(std::dynamic_pointer_cast<ScanOperator>(op));
-        // case OperatorType::COUNT:
-        //     return std::make_shared<CountExecutor>(std::dynamic_pointer_cast<CountOperator>(op));
         case OperatorType::FILTER:
             return std::make_shared<FilterExecutor>(std::dynamic_pointer_cast<FilterOperator>(op));
         case OperatorType::TRANSFORM:
