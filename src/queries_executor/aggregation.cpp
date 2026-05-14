@@ -161,7 +161,7 @@ void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     } else if (input_type.value() != column_type) {
         throw std::runtime_error("max aggregation got different column types across batches");
     }
-    if (input_type.value() == Type::date || input_type.value() == Type::timestamp) {
+    if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
         batch->ColumnAt(column_index).Accept(date_visitor);
         return;
     }
@@ -169,7 +169,7 @@ void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch) {
 }
 
 std::string MaxAggregation::GetResultValue() const {
-    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp)) {
+    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str)) {
         return std::string(date_visitor.Max());
     }
 
@@ -177,7 +177,7 @@ std::string MaxAggregation::GetResultValue() const {
 }
 
 Type MaxAggregation::GetResultType() const {
-    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp)) {
+    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str)) {
         return input_type.value();
     }
     return Type::int64;
