@@ -306,20 +306,36 @@ std::shared_ptr<Operator> MakeQuery28() {
 
 int main() {
     MakeDataPath();
-    const std::array query_factories = {
-        &MakeQuery0,  &MakeQuery1,  &MakeQuery2,  &MakeQuery3,  &MakeQuery4,
-        &MakeQuery5,  &MakeQuery6,  &MakeQuery7,  &MakeQuery8,  &MakeQuery9,
-        &MakeQuery10, &MakeQuery11, &MakeQuery12, &MakeQuery13, &MakeQuery14,
-        &MakeQuery15, &MakeQuery16, &MakeQuery17, &MakeQuery18, &MakeQuery19,
-        &MakeQuery20, &MakeQuery21, &MakeQuery22, &MakeQuery23, &MakeQuery24,
-        &MakeQuery25, &MakeQuery26, &MakeQuery27, &MakeQuery28,
-    };
-
-    std::vector<std::shared_ptr<Operator>> queries;
-    queries.reserve(query_factories.size());
-    for (const auto query_factory : query_factories) {
-        queries.push_back(query_factory());
-    }
+    std::shared_ptr<Operator> queries[43];
+    queries[0] = MakeQuery0();
+    queries[1] = MakeQuery1();
+    queries[2] = MakeQuery2();
+    queries[3] = MakeQuery3();
+    queries[4] = MakeQuery4();
+    queries[5] = MakeQuery5();
+    queries[6] = MakeQuery6();
+    queries[7] = MakeQuery7();
+    queries[8] = MakeQuery8();
+    queries[9] = MakeQuery9();
+    queries[10] = MakeQuery10();
+    queries[11] = MakeQuery11();
+    queries[12] = MakeQuery12();
+    queries[13] = MakeQuery13();
+    queries[14] = MakeQuery14();
+    queries[15] = MakeQuery15();
+    queries[16] = MakeQuery16();
+    queries[17] = MakeQuery17();
+    queries[18] = MakeQuery18();
+    queries[19] = MakeQuery19();
+    queries[20] = MakeQuery20();
+    queries[21] = MakeQuery21();
+    queries[22] = MakeQuery22();
+    queries[23] = MakeQuery23();
+    queries[24] = MakeQuery24();
+    queries[25] = MakeQuery25();
+    queries[26] = MakeQuery26();
+    queries[27] = MakeQuery27();
+    queries[28] = MakeQuery28();
 
     for (size_t i = 1; i < 10; ++i) {
         auto executor = ExecuteOperator(queries[i]);
