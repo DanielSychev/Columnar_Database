@@ -11,6 +11,9 @@
 
 namespace {
 std::unique_ptr<std::ifstream> data_stream;
+const std::string data_path = "src/TestFiles/output.mf";
+const std::string result_prefix = "src/TestFiles/result";
+const std::string result_suffix = ".csv";
 }
 
 auto MakeScan(std::vector<std::string>&& column_names) {
@@ -30,7 +33,6 @@ auto MakeOrderBy(std::shared_ptr<Operator> child_op, std::vector<std::string>&& 
 }
 
 void MakeDataPath() {
-    std::string data_path = "//Users//mac//Columnar_Database//src//TestFiles//output.mf";
     data_stream = std::make_unique<std::ifstream>(data_path, std::ios::binary);
     if (!data_stream->is_open()) {
         throw std::runtime_error("cannot open data file: " + data_path);
@@ -319,9 +321,9 @@ int main() {
         queries.push_back(query_factory());
     }
 
-    for (size_t i = 25; i < 28; ++i) {
+    for (size_t i = 1; i < 10; ++i) {
         auto executor = ExecuteOperator(queries[i]);
-        std::ofstream result_stream("//Users//mac//Columnar_Database//src//TestFiles//result" + std::to_string(i) + ".csv");
+        std::ofstream result_stream(result_prefix + std::to_string(i) + result_suffix);
         Writer result_writer(result_stream);
         while (auto batch = executor->NextBatch()) {
             batch_serialization::WriteCsvBatch(*batch, result_writer);
