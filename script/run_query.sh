@@ -13,7 +13,7 @@ LOGS="$4"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CLI="$REPO_DIR/build/clickbench/clickbench"
+CLI="$REPO_DIR/build-o3-native/clickbench/clickbench"
 
 if [ ! -x "$CLI" ]; then
     echo "clickbench binary was not found at $CLI; run ./script/build.sh first" >&2

@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-BUILD_DIR="$REPO_DIR/build"
+BUILD_DIR="$REPO_DIR/build-o3-native"
 
 if command -v nproc >/dev/null 2>&1; then
     JOBS="$(nproc)"
@@ -17,6 +17,8 @@ CMAKE_ARGS=(
     -S "$REPO_DIR"
     -B "$BUILD_DIR"
     -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_C_FLAGS_RELEASE="-O3 -march=native -DNDEBUG"
+    -DCMAKE_CXX_FLAGS_RELEASE="-O3 -march=native -DNDEBUG"
     -DBUILD_TESTING=OFF
 )
 

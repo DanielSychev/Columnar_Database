@@ -12,7 +12,7 @@ COLUMNAR="$2"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SCHEMA="$SCRIPT_DIR/schema_clickbench.csv"
-CLI="$REPO_DIR/build/src/engine/engine_cli"
+CLI="$REPO_DIR/build-o3-native/src/engine/engine_cli"
 
 if [ ! -x "$CLI" ]; then
     echo "engine_cli was not found at $CLI; run ./script/build.sh first" >&2
