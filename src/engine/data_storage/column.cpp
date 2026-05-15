@@ -48,6 +48,56 @@ bool LikeCompare(std::string_view value, std::string_view pattern) {
 }
 }
 
+std::shared_ptr<Column> CreateColumn(Type type) {
+    switch (type) {
+    case Type::int128:
+        return std::make_shared<Int128Column>();
+    case Type::int64:
+        return std::make_shared<Int64Column>();
+    case Type::int32:
+        return std::make_shared<Int32Column>();
+    case Type::int16:
+        return std::make_shared<Int16Column>();
+    case Type::int8:
+        return std::make_shared<Int8Column>();
+    case Type::double_:
+        return std::make_shared<DoubleColumn>();
+    case Type::str:
+        return std::make_shared<StrColumn>();
+    case Type::date:
+        return std::make_shared<DateColumn>();
+    case Type::timestamp:
+        return std::make_shared<TimeStampColumn>();
+    default:
+        throw std::runtime_error("unknown type was given (in CreateColumn)");
+    }
+}
+
+std::shared_ptr<Column> CreateColumn(Type type, const std::vector<std::string>& values) {
+    switch (type) {
+    case Type::int128:
+        return std::make_shared<Int128Column>(values);
+    case Type::int64:
+        return std::make_shared<Int64Column>(values);
+    case Type::int32:
+        return std::make_shared<Int32Column>(values);
+    case Type::int16:
+        return std::make_shared<Int16Column>(values);
+    case Type::int8:
+        return std::make_shared<Int8Column>(values);
+    case Type::double_:
+        return std::make_shared<DoubleColumn>(values);
+    case Type::str:
+        return std::make_shared<StrColumn>(values);
+    case Type::date:
+        return std::make_shared<DateColumn>(values);
+    case Type::timestamp:
+        return std::make_shared<TimeStampColumn>(values);
+    default:
+        throw std::runtime_error("unknown type was given (in CreateColumn)");
+    }
+}
+
 void StrColumn::AddElem(std::string&& s) {
     data.push_back(std::move(s));
 }
@@ -85,6 +135,9 @@ size_t StrColumn::Size() const {
 }
 
 bool StrColumn::Compare(const std::string& elem, size_t i, CompareSign sign) const {
+    if (sign == CompareSign::IN) {
+        throw std::runtime_error("IN sign is not supported for StrColumn");
+    }
     if (sign == CompareSign::LIKE) {
         return LikeCompare(data[i], elem);
     }

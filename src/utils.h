@@ -19,7 +19,8 @@ enum class CompareSign {
     LESS_OR_EQUAL,
     GREATER_OR_EQUAL,
     LIKE,
-    NOT_LIKE
+    NOT_LIKE,
+    IN
 };
 
 enum class Type {

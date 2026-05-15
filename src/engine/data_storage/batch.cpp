@@ -5,33 +5,6 @@
 #include <stdexcept>
 #include <vector>
 
-namespace {
-std::shared_ptr<Column> CreateColumn(Type type) {
-    switch (type) {
-    case Type::int128:
-        return std::make_shared<Int128Column>();
-    case Type::int64:
-        return std::make_shared<Int64Column>();
-    case Type::int32:
-        return std::make_shared<Int32Column>();
-    case Type::int16:
-        return std::make_shared<Int16Column>();
-    case Type::int8:
-        return std::make_shared<Int8Column>();
-    case Type::double_:
-        return std::make_shared<DoubleColumn>();
-    case Type::str:
-        return std::make_shared<StrColumn>();
-    case Type::date:
-        return std::make_shared<DateColumn>();
-    case Type::timestamp:
-        return std::make_shared<TimeStampColumn>();
-    default:
-        throw std::runtime_error("unknown type was given (in CreateColumn)");
-    }
-}
-}
-
 Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), batch_rows_count(batch_rows_count) {
     has_schema = true;
     columns.resize(schema.NumColumns());
@@ -75,10 +48,7 @@ void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
     ValidateColumnIndex(column_index, values.size());
 
     SetRowsCount(values.size());
-
-    for (auto& value : values) {
-        columns[column_index]->AddElem(std::move(value));
-    }
+    columns[column_index] = CreateColumn(schema.ColumnTypeAt(column_index), values);
 }
 
 void Batch::AddColumn(size_t column_index, std::shared_ptr<Column> column) {
