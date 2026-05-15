@@ -579,6 +579,16 @@ int main(int argc, char** argv) {
             return 1;
         }
 
+        if (std::string(argv[1]) == "-1") {
+            for (size_t query_num = 0; query_num <= 42; ++query_num) {
+                RunQuery(
+                    query_num,
+                    GetArgument(argc, argv, 2, default_mf_input_path),
+                    GetArgument(argc, argv, 3, GetDefaultResultPath(query_num))
+                );
+            }
+            return 0;
+        }
         const size_t query_num = ParseQueryNumber(argv[1]);
         EnsureNoExtraArguments(argc, 4);
         RunQuery(
