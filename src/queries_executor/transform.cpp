@@ -20,6 +20,17 @@ int64_t ParseMinute(std::string_view timestamp) {
     return static_cast<int64_t>((tens - '0') * 10 + (ones - '0'));
 }
 
+std::string TruncateTimestampToMinute(std::string_view timestamp) {
+    if (timestamp.size() < 16 || timestamp[4] != '-' || timestamp[7] != '-' ||
+        timestamp[10] != ' ' || timestamp[13] != ':') {
+        throw std::runtime_error("wrong timestamp format for DateTruncMinuteTransform");
+    }
+
+    std::string truncated(timestamp.substr(0, 16));
+    truncated += ":00";
+    return truncated;
+}
+
 size_t ExpectSourceType(
     const Schema& schema,
     const std::string& source_column_name,
@@ -104,7 +115,7 @@ std::shared_ptr<Column> ExtractMinuteTransform::Apply(const Batch& batch) const 
         "ExtractMinuteTransform"
     );
     const auto& timestamp_column =
-        GetTypedColumn<TimeStampColumn>(batch, column_index, "TIMESTAMP", "ExtractMinuteTransform");
+        GetTypedColumn<StrColumn>(batch, column_index, "TIMESTAMP", "ExtractMinuteTransform");
 
     std::vector<int64_t> minutes;
     minutes.reserve(batch.RowsCount());
@@ -112,6 +123,43 @@ std::shared_ptr<Column> ExtractMinuteTransform::Apply(const Batch& batch) const 
         minutes.push_back(ParseMinute(value));
     }
     return std::make_shared<Int64Column>(minutes);
+}
+
+DateTruncMinuteTransform::DateTruncMinuteTransform(const std::string& source_column_name_, const std::string& result_name_)
+    : Transform(result_name_), source_column_name(source_column_name_) {
+    if (result_name_.empty()) {
+        result_name = "DATE_TRUNC('minute', " + source_column_name_ + ")";
+    }
+}
+
+Type DateTruncMinuteTransform::ResultType(const Schema& input_schema) const {
+    ExpectSourceType(
+        input_schema,
+        source_column_name,
+        Type::timestamp,
+        "TIMESTAMP",
+        "DateTruncMinuteTransform"
+    );
+    return Type::timestamp;
+}
+
+std::shared_ptr<Column> DateTruncMinuteTransform::Apply(const Batch& batch) const {
+    const size_t column_index = ExpectSourceType(
+        batch.GetSchema(),
+        source_column_name,
+        Type::timestamp,
+        "TIMESTAMP",
+        "DateTruncMinuteTransform"
+    );
+    const auto& timestamp_column =
+        GetTypedColumn<StrColumn>(batch, column_index, "TIMESTAMP", "DateTruncMinuteTransform");
+
+    std::vector<std::string> values;
+    values.reserve(batch.RowsCount());
+    for (const auto& value : timestamp_column.Data()) {
+        values.push_back(TruncateTimestampToMinute(value));
+    }
+    return std::make_shared<TimeStampColumn>(std::move(values));
 }
 
 

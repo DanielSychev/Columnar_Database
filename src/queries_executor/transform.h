@@ -31,6 +31,16 @@ private:
     std::string source_column_name;
 };
 
+struct DateTruncMinuteTransform : public Transform {
+    DateTruncMinuteTransform(const std::string& source_column_name_, const std::string& result_name = "");
+
+    Type ResultType(const Schema& input_schema) const override;
+    std::shared_ptr<Column> Apply(const Batch& batch) const override;
+
+private:
+    std::string source_column_name;
+};
+
 struct LengthTransform : public Transform {
     LengthTransform(const std::string& source_column_name_, const std::string& result_name = "");
 

@@ -1,20 +1,43 @@
 #include "engine/serialization/batch_serialization.h"
 #include "queries_executor/aggregation.h"
-#include "queries_executor/operator.h"
 #include "queries_executor/executor.h"
+#include "queries_executor/operator.h"
 #include "queries_executor/transform.h"
-#include <array>
+#include <chrono>
 #include <cstddef>
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
+constexpr std::string_view default_mf_input_path = "src/TestFiles/output.mf";
+constexpr std::string_view default_result_directory = "src/TestFiles/result";
 std::unique_ptr<std::ifstream> data_stream;
-const std::string data_path = "src/TestFiles/output.mf";
-const std::string result_prefix = "src/TestFiles/result";
-const std::string result_suffix = ".csv";
+
+void Helper(const char* executable) {
+    std::cout << "Usage:\n" << "  " << executable << " <query_num> [input.mf] [output.csv]\n";
+}
+
+std::string GetArgument(int argc, char** argv, int index, std::string_view default_value) {
+    if (argc > index) {
+        return argv[index];
+    }
+    return std::string(default_value);
+}
+
+void EnsureNoExtraArguments(int argc, int max_argc) {
+    if (argc > max_argc) {
+        throw std::runtime_error("too many arguments");
+    }
+}
+
+std::string GetDefaultResultPath(size_t query_num) {
+    return std::string(default_result_directory) + std::to_string(query_num) + ".csv";
+}
 }
 
 auto MakeScan(std::vector<std::string>&& column_names) {
@@ -33,7 +56,7 @@ auto MakeOrderBy(std::shared_ptr<Operator> child_op, std::vector<std::string>&& 
     return std::make_shared<OrderByOperator>(child_op, std::move(column_names), descending, limit, offset);
 }
 
-void MakeDataPath() {
+void MakeDataPath(const std::string& data_path) {
     data_stream = std::make_unique<std::ifstream>(data_path, std::ios::binary);
     if (!data_stream->is_open()) {
         throw std::runtime_error("cannot open data file: " + data_path);
@@ -390,7 +413,12 @@ std::shared_ptr<Operator> MakeQuery35() {
 // SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND URL <> '' GROUP BY URL ORDER BY PageViews DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery36() {
     auto scan = MakeScan({"URL", "CounterID", "EventDate", "DontCountHits", "IsRefresh"});
-    auto filter = MakeFilter(scan, {"CounterID", "EventDate", "DontCountHits", "IsRefresh", "URL"}, {"62", "2013-07-01", "0", "0", ""}, {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::EQUAL, CompareSign::EQUAL, CompareSign::NOT_EQUAL});
+    auto filter = MakeFilter(
+        scan,
+        {"CounterID", "EventDate", "EventDate", "DontCountHits", "IsRefresh", "URL"},
+        {"62", "2013-07-01", "2013-07-31", "0", "0", ""},
+        {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::LESS_OR_EQUAL, CompareSign::EQUAL, CompareSign::EQUAL, CompareSign::NOT_EQUAL}
+    );
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("PageViews")};
     auto group_by = MakeGroupBy(filter, {"URL"}, aggregations);
     return MakeOrderBy(group_by, {"PageViews"}, true, 10);
@@ -399,7 +427,12 @@ std::shared_ptr<Operator> MakeQuery36() {
 // SELECT Title, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND DontCountHits = 0 AND IsRefresh = 0 AND Title <> '' GROUP BY Title ORDER BY PageViews DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery37() {
     auto scan = MakeScan({"Title", "CounterID", "EventDate", "DontCountHits", "IsRefresh"});
-    auto filter = MakeFilter(scan, {"CounterID", "EventDate", "DontCountHits", "IsRefresh", "Title"}, {"62", "2013-07-01", "0", "0", ""}, {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::EQUAL, CompareSign::EQUAL, CompareSign::NOT_EQUAL});
+    auto filter = MakeFilter(
+        scan,
+        {"CounterID", "EventDate", "EventDate", "DontCountHits", "IsRefresh", "Title"},
+        {"62", "2013-07-01", "2013-07-31", "0", "0", ""},
+        {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::LESS_OR_EQUAL, CompareSign::EQUAL, CompareSign::EQUAL, CompareSign::NOT_EQUAL}
+    );
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("PageViews")};
     auto group_by = MakeGroupBy(filter, {"Title"}, aggregations);
     return MakeOrderBy(group_by, {"PageViews"}, true, 10);
@@ -408,7 +441,12 @@ std::shared_ptr<Operator> MakeQuery37() {
 // SELECT URL, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND IsLink <> 0 AND IsDownload = 0 GROUP BY URL ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;
 std::shared_ptr<Operator> MakeQuery38() {
     auto scan = MakeScan({"URL", "CounterID", "EventDate", "IsRefresh", "IsLink", "IsDownload"});
-    auto filter = MakeFilter(scan, {"CounterID", "EventDate", "IsRefresh", "IsLink", "IsDownload"}, {"62", "2013-07-01", "0", "0", "0"}, {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::EQUAL, CompareSign::NOT_EQUAL, CompareSign::NOT_EQUAL});
+    auto filter = MakeFilter(
+        scan,
+        {"CounterID", "EventDate", "EventDate", "IsRefresh", "IsLink", "IsDownload"},
+        {"62", "2013-07-01", "2013-07-31", "0", "0", "0"},
+        {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::LESS_OR_EQUAL, CompareSign::EQUAL, CompareSign::NOT_EQUAL, CompareSign::EQUAL}
+    );
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("PageViews")};
     auto group_by = MakeGroupBy(filter, {"URL"}, aggregations);
     return MakeOrderBy(group_by, {"PageViews"}, true, 10, 1000);
@@ -417,14 +455,23 @@ std::shared_ptr<Operator> MakeQuery38() {
 // SELECT TraficSourceID, SearchEngineID, AdvEngineID, CASE WHEN (SearchEngineID = 0 AND AdvEngineID = 0) THEN Referer ELSE '' END AS Src, URL AS Dst, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 GROUP BY TraficSourceID, SearchEngineID, AdvEngineID, Src, Dst ORDER BY PageViews DESC LIMIT 10 OFFSET 1000;
 std::shared_ptr<Operator> MakeQuery39() {
     auto scan = MakeScan({"TraficSourceID", "SearchEngineID", "AdvEngineID", "Referer", "URL", "CounterID", "EventDate", "IsRefresh"});
-    auto filter = MakeFilter(scan, {"CounterID", "EventDate", "IsRefresh"}, {"62", "2013-07-01", "0"}, {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::EQUAL});
-    auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<CaseWhenTransform>(
-        std::vector<std::string>{"SearchEngineID", "AdvEngineID"},
-        std::vector<std::string>{"0", "0"},
-        std::vector<CompareSign>{CompareSign::EQUAL, CompareSign::EQUAL},
-        "Referer",
-        "",
-        "Src"), std::make_shared<RenameTransform>("URL", "Dst")};
+    auto filter = MakeFilter(
+        scan,
+        {"CounterID", "EventDate", "EventDate", "IsRefresh"},
+        {"62", "2013-07-01", "2013-07-31", "0"},
+        {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::LESS_OR_EQUAL, CompareSign::EQUAL}
+    );
+    auto transforms = std::vector<std::shared_ptr<Transform>>{
+        std::make_shared<CaseWhenTransform>(
+            std::vector<std::string>{"SearchEngineID", "AdvEngineID"},
+            std::vector<std::string>{"0", "0"},
+            std::vector<CompareSign>{CompareSign::EQUAL, CompareSign::EQUAL},
+            "Referer",
+            "",
+            "Src"
+        ),
+        std::make_shared<RenameTransform>("URL", "Dst")
+    };
     auto transform = std::make_shared<TransformsOperator>(filter, std::move(transforms));
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("PageViews")};
     auto group_by = MakeGroupBy(transform, {"TraficSourceID", "SearchEngineID", "AdvEngineID", "Src", "Dst"}, aggregations);
@@ -434,7 +481,12 @@ std::shared_ptr<Operator> MakeQuery39() {
 // SELECT URLHash, EventDate, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND TraficSourceID IN (-1, 6) AND RefererHash = 3594120000172545465 GROUP BY URLHash, EventDate ORDER BY PageViews DESC LIMIT 10 OFFSET 100;
 std::shared_ptr<Operator> MakeQuery40() {
     auto scan = MakeScan({"URLHash", "EventDate", "CounterID", "IsRefresh", "TraficSourceID", "RefererHash"});
-    auto filter = MakeFilter(scan, {"CounterID", "EventDate", "IsRefresh", "TraficSourceID", "RefererHash"}, {"62", "2013-07-01", "0", "-1,6", "3594120000172545465"}, {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::EQUAL, CompareSign::IN, CompareSign::EQUAL});
+    auto filter = MakeFilter(
+        scan,
+        {"CounterID", "EventDate", "EventDate", "IsRefresh", "TraficSourceID", "RefererHash"},
+        {"62", "2013-07-01", "2013-07-31", "0", "-1,6", "3594120000172545465"},
+        {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::LESS_OR_EQUAL, CompareSign::EQUAL, CompareSign::IN, CompareSign::EQUAL}
+    );
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("PageViews")};
     auto group_by = MakeGroupBy(filter, {"URLHash", "EventDate"}, aggregations);
     return MakeOrderBy(group_by, {"PageViews"}, true, 10, 100);
@@ -443,66 +495,100 @@ std::shared_ptr<Operator> MakeQuery40() {
 // SELECT WindowClientWidth, WindowClientHeight, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-01' AND EventDate <= '2013-07-31' AND IsRefresh = 0 AND DontCountHits = 0 AND URLHash = 2868770270353813622 GROUP BY WindowClientWidth, WindowClientHeight ORDER BY PageViews DESC LIMIT 10 OFFSET 10000;
 std::shared_ptr<Operator> MakeQuery41() {
     auto scan = MakeScan({"WindowClientWidth", "WindowClientHeight", "CounterID", "EventDate", "IsRefresh", "DontCountHits", "URLHash"});
-    auto filter = MakeFilter(scan, {"CounterID", "EventDate", "IsRefresh", "DontCountHits", "URLHash"}, {"62", "2013-07-01", "0", "0", "2868770270353813622"}, {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::EQUAL, CompareSign::EQUAL, CompareSign::EQUAL});
+    auto filter = MakeFilter(
+        scan,
+        {"CounterID", "EventDate", "EventDate", "IsRefresh", "DontCountHits", "URLHash"},
+        {"62", "2013-07-01", "2013-07-31", "0", "0", "2868770270353813622"},
+        {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::LESS_OR_EQUAL, CompareSign::EQUAL, CompareSign::EQUAL, CompareSign::EQUAL}
+    );
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("PageViews")};
     auto group_by = MakeGroupBy(filter, {"WindowClientWidth", "WindowClientHeight"}, aggregations);
     return MakeOrderBy(group_by, {"PageViews"}, true, 10, 10000);
 }
 
-int main() {
-    // Ready for review comment
-    MakeDataPath();
-    std::shared_ptr<Operator> queries[43];
-    queries[0] = MakeQuery0();
-    queries[1] = MakeQuery1();
-    queries[2] = MakeQuery2();
-    queries[3] = MakeQuery3();
-    queries[4] = MakeQuery4();
-    queries[5] = MakeQuery5();
-    queries[6] = MakeQuery6();
-    queries[7] = MakeQuery7();
-    queries[8] = MakeQuery8();
-    queries[9] = MakeQuery9();
-    queries[10] = MakeQuery10();
-    queries[11] = MakeQuery11();
-    queries[12] = MakeQuery12();
-    queries[13] = MakeQuery13();
-    queries[14] = MakeQuery14();
-    queries[15] = MakeQuery15();
-    queries[16] = MakeQuery16();
-    queries[17] = MakeQuery17();
-    queries[18] = MakeQuery18();
-    queries[19] = MakeQuery19();
-    queries[20] = MakeQuery20();
-    queries[21] = MakeQuery21();
-    queries[22] = MakeQuery22();
-    queries[23] = MakeQuery23();
-    queries[24] = MakeQuery24();
-    queries[25] = MakeQuery25();
-    queries[26] = MakeQuery26();
-    queries[27] = MakeQuery27();
-    queries[28] = MakeQuery28();
-    queries[29] = MakeQuery29();
-    queries[30] = MakeQuery30();
-    queries[31] = MakeQuery31();
-    queries[32] = MakeQuery32();
-    queries[33] = MakeQuery33();
-    queries[34] = MakeQuery34();
-    queries[35] = MakeQuery35();
-    queries[36] = MakeQuery36();
-    queries[37] = MakeQuery37();
-    queries[38] = MakeQuery38();
-    queries[39] = MakeQuery39();
-    queries[40] = MakeQuery40();
-    queries[41] = MakeQuery41();
+// SELECT DATE_TRUNC('minute', EventTime) AS M, COUNT(*) AS PageViews FROM hits WHERE CounterID = 62 AND EventDate >= '2013-07-14' AND EventDate <= '2013-07-15' AND IsRefresh = 0 AND DontCountHits = 0 GROUP BY DATE_TRUNC('minute', EventTime) ORDER BY DATE_TRUNC('minute', EventTime) LIMIT 10 OFFSET 1000;
+std::shared_ptr<Operator> MakeQuery42() {
+    auto scan = MakeScan({"EventTime", "CounterID", "EventDate", "IsRefresh", "DontCountHits"});
+    auto filter = MakeFilter(
+        scan,
+        {"CounterID", "EventDate", "EventDate", "IsRefresh", "DontCountHits"},
+        {"62", "2013-07-14", "2013-07-15", "0", "0"},
+        {CompareSign::EQUAL, CompareSign::GREATER_OR_EQUAL, CompareSign::LESS_OR_EQUAL, CompareSign::EQUAL, CompareSign::EQUAL}
+    );
+    auto transforms = std::vector<std::shared_ptr<Transform>>{
+        std::make_shared<DateTruncMinuteTransform>("EventTime", "M")
+    };
+    auto transform = std::make_shared<TransformsOperator>(filter, std::move(transforms));
+    auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("PageViews")};
+    auto group_by = MakeGroupBy(transform, {"M"}, aggregations);
+    return MakeOrderBy(group_by, {"M"}, false, 10, 1000);
+}
 
-    for (size_t i = 41; i < 42; ++i) {
-        auto executor = ExecuteOperator(queries[i]);
-        std::ofstream result_stream(result_prefix + std::to_string(i) + result_suffix);
-        Writer result_writer(result_stream);
-        while (auto batch = executor->NextBatch()) {
-            batch_serialization::WriteCsvBatch(*batch, result_writer);
-        }
+size_t ParseQueryNumber(const char* value) {
+    const std::string query_text = value;
+    size_t parsed_length = 0;
+    const unsigned long parsed_value = std::stoul(query_text, &parsed_length);
+    if (parsed_length != query_text.size()) {
+        throw std::runtime_error("query number must be an integer");
     }
-    return 0;
+    return static_cast<size_t>(parsed_value);
+}
+
+std::shared_ptr<Operator> BuildQuery(size_t query_num) {
+    static std::shared_ptr<Operator> (*const query_builders[])() = {
+        MakeQuery0, MakeQuery1, MakeQuery2, MakeQuery3, MakeQuery4, MakeQuery5, MakeQuery6,
+        MakeQuery7, MakeQuery8, MakeQuery9, MakeQuery10, MakeQuery11, MakeQuery12, MakeQuery13,
+        MakeQuery14, MakeQuery15, MakeQuery16, MakeQuery17, MakeQuery18, MakeQuery19, MakeQuery20,
+        MakeQuery21, MakeQuery22, MakeQuery23, MakeQuery24, MakeQuery25, MakeQuery26, MakeQuery27,
+        MakeQuery28, MakeQuery29, MakeQuery30, MakeQuery31, MakeQuery32, MakeQuery33, MakeQuery34,
+        MakeQuery35, MakeQuery36, MakeQuery37, MakeQuery38, MakeQuery39, MakeQuery40, MakeQuery41,
+        MakeQuery42
+    };
+
+    constexpr size_t query_count = sizeof(query_builders) / sizeof(query_builders[0]);
+    if (query_num >= query_count) {
+        throw std::runtime_error("query number is out of range [0, 42]");
+    }
+
+    return query_builders[query_num]();
+}
+
+void RunQuery(size_t query_num, const std::string& input_path, const std::string& output_path) {
+    MakeDataPath(input_path);
+
+    std::ofstream result_stream(output_path);
+    if (!result_stream.is_open()) {
+        throw std::runtime_error("cannot open output file: " + output_path);
+    }
+
+    const auto start_time = std::chrono::steady_clock::now();
+    auto executor = ExecuteOperator(BuildQuery(query_num));
+    Writer result_writer(result_stream);
+    while (auto batch = executor->NextBatch()) {
+        batch_serialization::WriteCsvBatch(*batch, result_writer);
+    }
+    const auto end_time = std::chrono::steady_clock::now();
+    const std::chrono::duration<double> elapsed = end_time - start_time;
+    std::cerr << "Query " << query_num << " took " << elapsed.count() << " seconds\n";
+}
+
+int main(int argc, char** argv) {
+    try {
+        if (argc < 2) {
+            Helper(argv[0]);
+            return 1;
+        }
+
+        const size_t query_num = ParseQueryNumber(argv[1]);
+        EnsureNoExtraArguments(argc, 4);
+        RunQuery(
+            query_num,
+            GetArgument(argc, argv, 2, default_mf_input_path),
+            GetArgument(argc, argv, 3, GetDefaultResultPath(query_num))
+        );
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << '\n';
+        return 1;
+    }
 }
