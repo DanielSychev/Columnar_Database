@@ -17,9 +17,24 @@ CMAKE_ARGS=(
     -S "$REPO_DIR"
     -B "$BUILD_DIR"
     -DCMAKE_BUILD_TYPE=Release
-    -DCMAKE_C_FLAGS_RELEASE="-O3 -march=native -DNDEBUG"
-    -DCMAKE_CXX_FLAGS_RELEASE="-O3 -march=native -DNDEBUG"
     -DBUILD_TESTING=OFF
+)
+
+# Only add -march=native on x86_64 hosts. Some Docker hosts (or base images)
+# use different architectures where -march=native is invalid and will break
+# the configure or build step.
+ARCH="$(uname -m)"
+MARCH_FLAGS=""
+if [ "${DISABLE_MARCH_NATIVE:-0}" != "1" ] && [ "$ARCH" = "x86_64" ]; then
+    MARCH_FLAGS="-march=native"
+fi
+
+RELEASE_C_FLAGS="-O3 ${MARCH_FLAGS} -DNDEBUG"
+RELEASE_CXX_FLAGS="-O3 ${MARCH_FLAGS} -DNDEBUG"
+
+CMAKE_ARGS+=(
+    -DCMAKE_C_FLAGS_RELEASE="$RELEASE_C_FLAGS"
+    -DCMAKE_CXX_FLAGS_RELEASE="$RELEASE_CXX_FLAGS"
 )
 
 if command -v ninja >/dev/null 2>&1; then
