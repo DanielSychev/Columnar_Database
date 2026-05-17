@@ -19,6 +19,36 @@ void PrintElemVisitor(Writer& w, const std::vector<T>& v, size_t i, bool b) {
 
 namespace {
 bool LikeCompare(std::string_view value, std::string_view pattern) {
+    if (pattern.find('_') == std::string_view::npos) {
+        const size_t first_pct = pattern.find('%');
+
+        if (first_pct == std::string_view::npos) {
+            return value == pattern;
+        }
+
+        const size_t last_pct  = pattern.rfind('%');
+        const std::string_view prefix = pattern.substr(0, first_pct);
+        const std::string_view suffix = pattern.substr(last_pct + 1);
+        const std::string_view inner  = pattern.substr(first_pct + 1, last_pct - first_pct - 1);
+
+        if (inner.find('%') == std::string_view::npos) {
+            if (!value.starts_with(prefix)) return false;
+            if (!value.ends_with(suffix))   return false;
+            if (value.size() < prefix.size() + suffix.size()) return false;
+
+            if (first_pct == last_pct) {
+                return true;
+            }
+
+            if (inner.empty()) return true;
+            const std::string_view mid = value.substr(
+                prefix.size(),
+                value.size() - prefix.size() - suffix.size()
+            );
+            return mid.find(inner) != std::string_view::npos;
+        }
+    }
+
     std::vector<bool> previous(pattern.size() + 1, false);
     std::vector<bool> current(pattern.size() + 1, false);
     previous[0] = true;
