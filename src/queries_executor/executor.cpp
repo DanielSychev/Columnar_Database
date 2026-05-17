@@ -118,6 +118,9 @@ private:
             );
             (void)column_type;
             for (size_t j = 0; j < batch->RowsCount(); ++j) {
+                if (banned[j]) {
+                    continue;
+                }
                 if (!batch->ColumnAt(column_index).Compare(filter_operator_->values[i], j, filter_operator_->signs[i])) {
                     banned[j] = true;
                 }
