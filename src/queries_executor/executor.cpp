@@ -6,7 +6,7 @@
 #include "queries_executor/transform.h"
 #include <algorithm>
 #include <cstddef>
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <numeric>
 #include <queue>
@@ -208,7 +208,7 @@ public:
                 InitializeGroupByColumns(batch);
                 column_init = true;
             }
-            std::map<GroupKey, std::shared_ptr<Batch>> group_batches;
+            GroupMap group_batches;
             SplitBatchIntoGroups(group_batches, batch);
             RunGroupAggregations(group_batches);
         }
@@ -217,10 +217,22 @@ public:
 private:
     struct GroupKey {
         std::vector<std::string> values;
-        bool operator<(const GroupKey& other) const {
-            return values < other.values;
+        bool operator==(const GroupKey& other) const {
+            return values == other.values;
         }
     };
+
+    struct GroupKeyHash {
+        size_t operator()(const GroupKey& key) const {
+            size_t seed = 0;
+            for (const auto& s : key.values) {
+                seed ^= std::hash<std::string>{}(s) + 0x9e3779b9 + (seed << 6) + (seed >> 2); // тут мне помогли, ладно
+            }
+            return seed;
+        }
+    };
+
+    using GroupMap = std::unordered_map<GroupKey, std::shared_ptr<Batch>, GroupKeyHash>;
 
     void InitializeGroupByColumns(const std::shared_ptr<Batch>& batch) {
         for (const auto& column_name: group_by_operator_->group_by_columns) {
@@ -234,7 +246,7 @@ private:
         }
     }
 
-    void SplitBatchIntoGroups(std::map<GroupKey, std::shared_ptr<Batch>>& group_batches, const std::shared_ptr<Batch>& batch) {
+    void SplitBatchIntoGroups(GroupMap& group_batches, const std::shared_ptr<Batch>& batch) {
         for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
             GroupKey current_group_key;
             for (auto& column_index: group_by_positions) {
@@ -247,7 +259,7 @@ private:
         }
     }
 
-    void RunGroupAggregations(std::map<GroupKey, std::shared_ptr<Batch>>& group_batches) {
+    void RunGroupAggregations(GroupMap& group_batches) {
         for (auto& [group_key, group_batch]: group_batches) {
             auto& aggs = groups_aggs[group_key];
             if (aggs.empty()) {
@@ -287,7 +299,7 @@ private:
     bool was_produced = false;
     Schema result_schema;
     std::vector<size_t> group_by_positions;
-    std::map<GroupKey, std::vector<std::shared_ptr<Aggregation>>> groups_aggs;
+    std::unordered_map<GroupKey, std::vector<std::shared_ptr<Aggregation>>, GroupKeyHash> groups_aggs;
 };
 
 class OrderByExecutor : public PipelineExecutor {
