@@ -45,6 +45,9 @@ void WriteCsvBatch(const Batch& batch, Writer& writer) {
     size_t rows_count = batch.RowsCount();
     size_t columns_count = batch.ColumnsCount();
     for (size_t row_index = 0; row_index < rows_count; ++row_index) {
+        if (batch.HasMask() && batch.banned_rows[row_index]) {
+            continue;
+        }
         for (size_t column_index = 0; column_index < columns_count; ++column_index) {
             batch.ColumnAt(column_index).PrintElem(writer, row_index, column_index == columns_count - 1);
         }

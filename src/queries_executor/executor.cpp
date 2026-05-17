@@ -100,11 +100,16 @@ public:
             return nullptr;
         }
         BuildBanned(batch);
-        return BuildResultBatch(batch);
+        // return BuildResultBatch(batch);
+        return batch;
     }
 private:
     void BuildBanned(std::shared_ptr<Batch>& batch) {
-        banned.assign(batch->RowsCount(), false);
+        std::vector<bool>& banned = batch->banned_rows;
+        if (banned.empty()) {
+            banned.assign(batch->RowsCount(), false);
+        }
+        // banned.assign(batch->RowsCount(), false);
         for (size_t i = 0; i < filter_operator_->column_names.size(); ++i) {
             const auto [column_type, column_index] = queries_executor_detail::ResolveColumn(
                 batch->GetSchema(),
@@ -120,15 +125,14 @@ private:
         }
     }
 
-    std::shared_ptr<Batch> BuildResultBatch(const std::shared_ptr<Batch>& batch) {
-        auto new_batch = std::make_shared<Batch>(batch->GetSchema(), batch->RowsCount());
-        for (size_t j = 0; j < batch->ColumnsCount(); ++j) {
-            new_batch->AddColumn(j, batch->ColumnAt(j).CopyFiltered(banned));
-        }
-        return new_batch;
-    }
+    // std::shared_ptr<Batch> BuildResultBatch(const std::shared_ptr<Batch>& batch) {
+    //     auto new_batch = std::make_shared<Batch>(batch->GetSchema(), batch->RowsCount());
+    //     for (size_t j = 0; j < batch->ColumnsCount(); ++j) {
+    //         new_batch->AddColumn(j, batch->ColumnAt(j).CopyFiltered(banned));
+    //     }
+    //     return new_batch;
+    // }
 
-    std::vector<bool> banned;
     std::shared_ptr<FilterOperator> filter_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
 };
@@ -170,8 +174,13 @@ public:
         }
         was_produced = true;
         while (auto batch = child_executor_->NextBatch()) {
-            for (auto& aggr: aggregation_operator_->aggs) {
-                aggr->RunBatch(batch);
+            if (batch->HasMask()) {
+                for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
+                    if (batch->banned_rows[row_index]) continue;
+                    for (auto& aggr: aggregation_operator_->aggs) aggr->RunRow(batch, row_index);
+                }
+            } else {
+                for (auto& aggr: aggregation_operator_->aggs) aggr->RunBatch(batch);
             }
         }
         Schema result_schema;
@@ -248,6 +257,9 @@ private:
 
     void RunGroupAggregations(const std::shared_ptr<Batch>& batch) {
         for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
+            if (batch->HasMask() && batch->banned_rows[row_index]) {
+                continue;
+            }
             GroupKey current_group_key;
             for (auto& column_index: group_by_positions) {
                 current_group_key.values.push_back(batch->ColumnAt(column_index).GetElemToString(row_index));
@@ -381,6 +393,9 @@ private:
 
         auto consume_batch = [&](const std::shared_ptr<Batch>& batch) {
             for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
+                if (batch->HasMask() && batch->banned_rows[row_index]) {
+                    continue;
+                }
                 Row row = batch->GetRow(row_index);
 
                 if (heap.size() < limit + offset) {

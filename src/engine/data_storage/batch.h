@@ -28,7 +28,9 @@ public:
     size_t ColumnsCount() const;
     size_t MaxRowsCount() const;
     bool Empty() const;
+    bool HasMask() const;
 
+    std::vector<bool> banned_rows;
 private:
     void ValidateColumnIndex(size_t column_index, size_t row_count) const;
 
