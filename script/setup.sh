@@ -21,4 +21,4 @@ run_root() {
 
 export DEBIAN_FRONTEND=noninteractive
 run_root apt-get update
-run_root apt-get install -y --no-install-recommends build-essential cmake ninja-build
+run_root apt-get install -y --no-install-recommends build-essential cmake ninja-build libre2-dev
