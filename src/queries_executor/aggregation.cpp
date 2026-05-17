@@ -123,14 +123,11 @@ void CountDistinctAggregation::RunBatch(std::shared_ptr<Batch> batch) {
         "CountDistinctAggregation"
     );
     (void)column_type;
-    auto& column = batch->ColumnAt(column_index);
-    for (size_t i = 0; i < batch->RowsCount(); ++i) {
-        distinct_values.insert(column.GetElemToString(i));
-    }
+    batch->ColumnAt(column_index).Accept(visitor);
 }
 
 std::string CountDistinctAggregation::GetResultValue() const {
-    return std::to_string(distinct_values.size());
+    return std::to_string(visitor.Count());
 }
 
 Type CountDistinctAggregation::GetResultType() const {

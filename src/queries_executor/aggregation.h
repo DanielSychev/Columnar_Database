@@ -4,9 +4,9 @@
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/visitors/numeric_visitor.h"
 #include "engine/data_storage/visitors/date_visitor.h"
+#include "engine/data_storage/visitors/count_distinct_visitor.h"
 #include <memory>
 #include <optional>
-#include <unordered_set>
 // #include <queries_executor/operator.h>
 
 struct Aggregation {
@@ -67,7 +67,7 @@ struct CountDistinctAggregation : public Aggregation {
     virtual ~CountDistinctAggregation() = default;
 
     std::string column_name;
-    std::unordered_set<std::string> distinct_values;
+    CountDistinctVisitor visitor;
 };
 
 struct MaxAggregation : public Aggregation {
