@@ -1,5 +1,6 @@
 #include "engine/data_storage/column.h"
 #include <stdexcept>
+#include <string>
 
 template <typename T>
 void PrintVisitor(Writer& w, const std::vector<T>& v) {
@@ -156,8 +157,8 @@ std::string StrColumn::GetElemToString(size_t index) const {
     return data[index];
 }
 
-void StrColumn::Accept(ColumnVisitor& visitor) const {
-    visitor.Visit(*this);
+void StrColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
+    visitor.Visit(*this, ind);
 }
 
 size_t StrColumn::Size() const {
@@ -189,18 +190,25 @@ const std::vector<std::string>& StrColumn::Data() const {
     return data;
 }
 
+std::string StrColumn::ValueAt(size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in ValueAt");
+    }
+    return data[index];
+}
+
 std::shared_ptr<Column> TimeStampColumn::CopyReordered(const std::vector<size_t>& ordered) const {
     return std::make_shared<TimeStampColumn>(column_detail::CopyReorderedValues(data, ordered));
 }
 
-void TimeStampColumn::Accept(ColumnVisitor& visitor) const {
-    visitor.Visit(*this);
+void TimeStampColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
+    visitor.Visit(*this, ind);
 }
 
 std::shared_ptr<Column> DateColumn::CopyReordered(const std::vector<size_t>& ordered) const {
     return std::make_shared<DateColumn>(column_detail::CopyReorderedValues(data, ordered));
 }
 
-void DateColumn::Accept(ColumnVisitor& visitor) const {
-    visitor.Visit(*this);
+void DateColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
+    visitor.Visit(*this, ind);
 }
