@@ -208,9 +208,9 @@ public:
                 InitializeGroupByColumns(batch);
                 column_init = true;
             }
-            GroupMap group_batches;
-            SplitBatchIntoGroups(group_batches, batch);
-            RunGroupAggregations(group_batches);
+            // GroupMap group_batches;
+            RunGroupAggregations(batch);
+            // RunGroupAggregations(group_batches);
         }
         return BuildResultBatch();
     }
@@ -232,7 +232,7 @@ private:
         }
     };
 
-    using GroupMap = std::unordered_map<GroupKey, std::shared_ptr<Batch>, GroupKeyHash>;
+    // using GroupMap = std::unordered_map<GroupKey, std::shared_ptr<Batch>, GroupKeyHash>;
 
     void InitializeGroupByColumns(const std::shared_ptr<Batch>& batch) {
         for (const auto& column_name: group_by_operator_->group_by_columns) {
@@ -246,32 +246,41 @@ private:
         }
     }
 
-    void SplitBatchIntoGroups(GroupMap& group_batches, const std::shared_ptr<Batch>& batch) {
+    void RunGroupAggregations(const std::shared_ptr<Batch>& batch) {
         for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
             GroupKey current_group_key;
             for (auto& column_index: group_by_positions) {
                 current_group_key.values.push_back(batch->ColumnAt(column_index).GetElemToString(row_index));
             }
-            if (group_batches.find(current_group_key) == group_batches.end()) {
-                group_batches[current_group_key] = std::make_shared<Batch>(batch->GetSchema());
-            }
-            group_batches[current_group_key]->AddRow(batch->GetRow(row_index)); // копируем всё, а можно только те колонки, которые нужны для аггрегаций, но это сложнее реализовать
-        }
-    }
-
-    void RunGroupAggregations(GroupMap& group_batches) {
-        for (auto& [group_key, group_batch]: group_batches) {
-            auto& aggs = groups_aggs[group_key];
+            // if (group_batches.find(current_group_key) == group_batches.end()) {
+            //     group_batches[current_group_key] = std::make_shared<Batch>(batch->GetSchema());
+            // }
+            // group_batches[current_group_key]->AddRow(batch->GetRow(row_index)); // копируем всё, а можно только те колонки, которые нужны для аггрегаций, но это сложнее реализовать
+            auto& aggs = groups_aggs[current_group_key];
             if (aggs.empty()) {
                 for (const auto& aggr: group_by_operator_->aggs) {
                     aggs.push_back(aggr->Clone());
                 }
             }
             for (auto& aggr: aggs) {
-                aggr->RunBatch(group_batch);
+                aggr->RunRow(batch, row_index);
             }
         }
     }
+
+    // void RunGroupAggregations(GroupMap& group_batches) {
+    //     for (auto& [group_key, group_batch]: group_batches) {
+    //         auto& aggs = groups_aggs[group_key];
+    //         if (aggs.empty()) {
+    //             for (const auto& aggr: group_by_operator_->aggs) {
+    //                 aggs.push_back(aggr->Clone());
+    //             }
+    //         }
+    //         for (auto& aggr: aggs) {
+    //             aggr->RunBatch(group_batch);
+    //         }
+    //     }
+    // }
 
     std::shared_ptr<Batch> BuildResultBatch() {
         std::shared_ptr<Batch> result_batch;
