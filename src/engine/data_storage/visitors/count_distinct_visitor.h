@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <unordered_set>
@@ -9,44 +10,68 @@
 
 struct CountDistinctVisitor : public ColumnVisitor {
     template <typename ColumnT>
-    void IntegralVisit(const ColumnT& col) {
-        for (const auto& elem : col.Data()) {
-            integral_values.insert(static_cast<int64_t>(elem));
+    void IntegralVisit(const ColumnT& col, size_t ind) {
+        if (ind == -1u) {
+             for (const auto& elem : col.Data()) {
+                integral_values.insert(static_cast<int64_t>(elem));
+            }
+        } else {
+            integral_values.insert(static_cast<int64_t>(col.ValueAt(ind)));
         }
     }
 
-    void Visit(const Int8Column& col) override  { IntegralVisit(col); }
-    void Visit(const Int16Column& col) override { IntegralVisit(col); }
-    void Visit(const Int32Column& col) override { IntegralVisit(col); }
-    void Visit(const Int64Column& col) override { IntegralVisit(col); }
+    void Visit(const Int8Column& col, size_t ind) override  { IntegralVisit(col, ind); }
+    void Visit(const Int16Column& col, size_t ind) override { IntegralVisit(col, ind); }
+    void Visit(const Int32Column& col, size_t ind) override { IntegralVisit(col, ind); }
+    void Visit(const Int64Column& col, size_t ind) override { IntegralVisit(col, ind); }
 
-    void Visit(const Int128Column& col) override {
-        for (const auto& elem : col.Data()) {
-            string_values.insert(column_detail::ToString(elem));
+    void Visit(const Int128Column& col, size_t ind) override {
+        if (ind == -1u) {
+            for (const auto& elem : col.Data()) {
+                string_values.insert(column_detail::ToString(elem));
+            }
+        } else {
+            string_values.insert(column_detail::ToString(col.ValueAt(ind)));
         }
     }
 
-    void Visit(const DoubleColumn& col) override {
-        for (const auto& elem : col.Data()) {
-            double_values.insert(elem);
+    void Visit(const DoubleColumn& col, size_t ind) override {
+        if (ind == -1u) {
+            for (const auto& elem : col.Data()) {
+                double_values.insert(elem);
+            }
+        } else {
+            double_values.insert(col.ValueAt(ind));
         }
     }
 
-    void Visit(const StrColumn& col) override {
-        for (const auto& elem : col.Data()) {
-            string_values.insert(elem);
+    void Visit(const StrColumn& col, size_t ind) override {
+        if (ind == -1u) {
+            for (const auto& elem : col.Data()) {
+                string_values.insert(elem);
+            }
+        } else {
+            string_values.insert(col.ValueAt(ind));
         }
     }
 
-    void Visit(const DateColumn& col) override {
-        for (const auto& elem : col.Data()) {
-            string_values.insert(elem);
+    void Visit(const DateColumn& col, size_t ind) override {
+        if (ind == -1u) {
+            for (const auto& elem : col.Data()) {
+                string_values.insert(elem);
+            }
+        } else {
+            string_values.insert(col.ValueAt(ind));
         }
     }
 
-    void Visit(const TimeStampColumn& col) override {
-        for (const auto& elem : col.Data()) {
-            string_values.insert(elem);
+    void Visit(const TimeStampColumn& col, size_t ind) override {
+        if (ind == -1u) {
+            for (const auto& elem : col.Data()) {
+                string_values.insert(elem);
+            }
+        } else {
+            string_values.insert(col.ValueAt(ind));
         }
     }
 
