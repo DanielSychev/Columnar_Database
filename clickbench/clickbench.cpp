@@ -320,7 +320,7 @@ std::shared_ptr<Operator> MakeQuery27() {
 std::shared_ptr<Operator> MakeQuery28() {
     auto scan = MakeScan({"Referer"});
     auto filter = MakeFilter(scan, {"Referer"}, {""}, {CompareSign::NOT_EQUAL});
-    auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<RegexpReplaceTransform>("Referer", "^https?://(?:www\\.)?([^/]+)/.*$", "$1", "k"), std::make_shared<LengthTransform>("Referer", "length(Referer)")};
+    auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<RegexpReplaceTransform>("Referer", "^https?://(?:www\\.)?([^/]+)/.*$", "\\1", "k"), std::make_shared<LengthTransform>("Referer", "length(Referer)")};
     auto transform = std::make_shared<TransformsOperator>(filter, std::move(transforms));
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<AvgAggregation>("length(Referer)", "l"), std::make_shared<CountAggregation>("c"), std::make_shared<MinAggregation>("Referer")};
     auto group_by = MakeGroupBy(transform, {"k"}, aggregations);

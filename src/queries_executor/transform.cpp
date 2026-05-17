@@ -1,9 +1,9 @@
 #include "queries_executor/transform.h"
 #include "queries_executor/helpers.h"
+#include <re2/re2.h>
 #include <utils.h>
 #include <cstdint>
 #include <numeric>
-#include <regex>
 #include <stdexcept>
 #include <string_view>
 
@@ -230,7 +230,9 @@ std::shared_ptr<Column> RegexpReplaceTransform::Apply(const Batch& batch) const 
     std::vector<std::string> values;
     values.reserve(batch.RowsCount());
     for (const auto& value : str_column.Data()) {
-        values.push_back(std::regex_replace(value, regex_pattern, replacement));
+        std::string result = value;
+        RE2::GlobalReplace(&result, regex_pattern, replacement);
+        values.push_back(std::move(result));
     }
     return std::make_shared<StrColumn>(values);
 }
