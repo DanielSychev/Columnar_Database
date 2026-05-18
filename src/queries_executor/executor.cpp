@@ -100,7 +100,6 @@ public:
             return nullptr;
         }
         BuildBanned(batch);
-        // return BuildResultBatch(batch);
         return batch;
     }
 private:
@@ -109,7 +108,6 @@ private:
         if (banned.empty()) {
             banned.assign(batch->RowsCount(), false);
         }
-        // banned.assign(batch->RowsCount(), false);
         for (size_t i = 0; i < filter_operator_->column_names.size(); ++i) {
             const auto [column_type, column_index] = queries_executor_detail::ResolveColumn(
                 batch->GetSchema(),
@@ -127,14 +125,6 @@ private:
             }
         }
     }
-
-    // std::shared_ptr<Batch> BuildResultBatch(const std::shared_ptr<Batch>& batch) {
-    //     auto new_batch = std::make_shared<Batch>(batch->GetSchema(), batch->RowsCount());
-    //     for (size_t j = 0; j < batch->ColumnsCount(); ++j) {
-    //         new_batch->AddColumn(j, batch->ColumnAt(j).CopyFiltered(banned));
-    //     }
-    //     return new_batch;
-    // }
 
     std::shared_ptr<FilterOperator> filter_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
@@ -220,9 +210,7 @@ public:
                 InitializeGroupByColumns(batch);
                 column_init = true;
             }
-            // GroupMap group_batches;
             RunGroupAggregations(batch);
-            // RunGroupAggregations(group_batches);
         }
         return BuildResultBatch();
     }
@@ -243,8 +231,6 @@ private:
             return seed;
         }
     };
-
-    // using GroupMap = std::unordered_map<GroupKey, std::shared_ptr<Batch>, GroupKeyHash>;
 
     void InitializeGroupByColumns(const std::shared_ptr<Batch>& batch) {
         for (const auto& column_name: group_by_operator_->group_by_columns) {
@@ -267,10 +253,6 @@ private:
             for (auto& column_index: group_by_positions) {
                 current_group_key.values.push_back(batch->ColumnAt(column_index).GetElemToString(row_index));
             }
-            // if (group_batches.find(current_group_key) == group_batches.end()) {
-            //     group_batches[current_group_key] = std::make_shared<Batch>(batch->GetSchema());
-            // }
-            // group_batches[current_group_key]->AddRow(batch->GetRow(row_index)); // копируем всё, а можно только те колонки, которые нужны для аггрегаций, но это сложнее реализовать
             auto& aggs = groups_aggs[current_group_key];
             if (aggs.empty()) {
                 for (const auto& aggr: group_by_operator_->aggs) {
@@ -282,20 +264,6 @@ private:
             }
         }
     }
-
-    // void RunGroupAggregations(GroupMap& group_batches) {
-    //     for (auto& [group_key, group_batch]: group_batches) {
-    //         auto& aggs = groups_aggs[group_key];
-    //         if (aggs.empty()) {
-    //             for (const auto& aggr: group_by_operator_->aggs) {
-    //                 aggs.push_back(aggr->Clone());
-    //             }
-    //         }
-    //         for (auto& aggr: aggs) {
-    //             aggr->RunBatch(group_batch);
-    //         }
-    //     }
-    // }
 
     std::shared_ptr<Batch> BuildResultBatch() {
         std::shared_ptr<Batch> result_batch;
