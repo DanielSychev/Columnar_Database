@@ -21,7 +21,7 @@ public:
     virtual void Read(Reader&) = 0;
     virtual void PrintElem(Writer&, size_t, bool) const = 0;
     virtual std::string GetElemToString(size_t index) const = 0;
-    virtual void Accept(ColumnVisitor& visitor) const = 0;
+    virtual void Accept(ColumnVisitor& visitor, size_t ind = -1u) const = 0;
     virtual bool Compare(const std::string&, size_t, CompareSign) const = 0;
     virtual std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const = 0;
     virtual std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const = 0;
@@ -230,8 +230,8 @@ public:
         }
     }
 
-    void Accept(ColumnVisitor& visitor) const override {
-        visitor.Visit(*this);
+    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override {
+        visitor.Visit(*this, ind);
     }
 
     bool Compare(const std::string& elem, size_t index, CompareSign sign) const override {
@@ -285,6 +285,13 @@ public:
         return data;
     }
 
+    T ValueAt(size_t index) const {
+        if (index >= data.size()) {
+            throw std::out_of_range("index out of range in ValueAt");
+        }
+        return data[index];
+    }
+
     ~NumericColumn() override = default;
 private:
     static_assert(concepts::BinarySerializable<T>, "NumericColumn requires binary-serializable type");
@@ -311,12 +318,13 @@ public:
     void Read(Reader&) override;
     void PrintElem(Writer&, size_t, bool) const override;
     std::string GetElemToString(size_t index) const override;
-    void Accept(ColumnVisitor& visitor) const override;
+    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
     bool Compare(const std::string&, size_t, CompareSign) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
     const std::vector<std::string>& Data() const;
+    std::string ValueAt(size_t index) const;
     ~StrColumn() override = default;
 protected:
     std::vector<std::string> data;
@@ -329,7 +337,7 @@ public:
     TimeStampColumn(std::vector<std::string>&& data_) : StrColumn(std::move(data_)) {}
     TimeStampColumn(const TimeStampColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
-    void Accept(ColumnVisitor& visitor) const override;
+    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
     ~TimeStampColumn() override = default;
 private:
 };
@@ -341,7 +349,7 @@ public:
     DateColumn(std::vector<std::string>&& data_) : StrColumn(std::move(data_)) {}
     DateColumn(const DateColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
-    void Accept(ColumnVisitor& visitor) const override;
+    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
     ~DateColumn() override = default;
 private:
 };

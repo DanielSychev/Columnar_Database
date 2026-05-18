@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 template <typename T>
@@ -17,14 +18,14 @@ class DateColumn;
 class TimeStampColumn;
 
 struct ColumnVisitor {
-    virtual void Visit(const Int128Column& column) = 0;
-    virtual void Visit(const Int64Column& column) = 0;
-    virtual void Visit(const Int32Column& column) = 0;
-    virtual void Visit(const Int16Column& column) = 0;
-    virtual void Visit(const Int8Column& column) = 0;
-    virtual void Visit(const DoubleColumn& column) = 0;
-    virtual void Visit(const StrColumn& column) = 0;
-    virtual void Visit(const DateColumn& column) = 0;
-    virtual void Visit(const TimeStampColumn& column) = 0;
+    virtual void Visit(const Int128Column& column, size_t ind) = 0;
+    virtual void Visit(const Int64Column& column, size_t ind) = 0;
+    virtual void Visit(const Int32Column& column, size_t ind) = 0;
+    virtual void Visit(const Int16Column& column, size_t ind) = 0;
+    virtual void Visit(const Int8Column& column, size_t ind) = 0;
+    virtual void Visit(const DoubleColumn& column, size_t ind) = 0;
+    virtual void Visit(const StrColumn& column, size_t ind) = 0;
+    virtual void Visit(const DateColumn& column, size_t ind) = 0;
+    virtual void Visit(const TimeStampColumn& column, size_t ind) = 0;
     virtual ~ColumnVisitor() = default;
 };

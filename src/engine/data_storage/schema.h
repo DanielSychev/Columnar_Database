@@ -9,6 +9,7 @@
 #include <vector>
 #include "CsvMfReader/reader.h"
 #include "CsvMfWriter/writer.h"
+#include <unordered_map>
 
 struct Schema {
     Schema();
@@ -26,4 +27,5 @@ private:
     std::vector<std::string> names;
     std::vector<Type> types;
     size_t column_count;
+    std::unordered_map<std::string, size_t> name_to_index;
 };

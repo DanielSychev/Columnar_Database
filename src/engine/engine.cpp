@@ -35,7 +35,6 @@ void Engine::CsvToMfProcessor() {
     data_writer.BinaryWrite(batch_meta_positions.size()); // пишем количество батчей и позиции начал их меты
     for (size_t i = 0; i < batch_meta_positions.size(); ++i) {
         data_writer.BinaryWrite(batch_meta_positions[i]);
-        // std::cout << batch_positions[i] << std::endl;
     }
     
     data_writer.BinaryWrite(pos); // пишем метку в конце, откуда надо читать мету
@@ -47,7 +46,6 @@ void Engine::MfToCsvBatchProcessor(const Schema& schema) {
     batch_meta_positions.resize(batch_count);
     for (size_t i = 0; i < batch_meta_positions.size(); ++i) {
         data_reader.BinaryRead(batch_meta_positions[i]);
-        // std::cout << batch_positions[i] << std::endl;
     }
 
     for (size_t i = 0; i < batch_meta_positions.size(); ++i) { // читаем из my_format и пишем батчи в csv

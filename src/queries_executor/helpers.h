@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/data_storage/batch.h"
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/schema.h"
 #include <stdexcept>
@@ -19,6 +20,15 @@ inline std::pair<Type, size_t> ResolveColumn(
     throw std::runtime_error(
         "no such column '" + column_name + "' in schema (in " + std::string(context) + ")"
     );
+}
+
+inline void CheckRow(std::shared_ptr<Batch> batch, size_t row_index) {
+    if (!batch) {
+        throw std::runtime_error("expected batch");
+    }
+    if (row_index >= batch->RowsCount()) {
+        throw std::runtime_error("row index is out of batch bounds");
+    }
 }
 
 inline int8_t CompareTypedValues(

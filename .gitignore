@@ -15,3 +15,7 @@ src/TestFiles/schema_sample.csv
 # Local generated test artifacts
 src/TestFiles/*.mf
 src/TestFiles/*_output.csv
+
+.clangd
+
+src/TestFiles

@@ -8,6 +8,9 @@ Schema::Schema(std::vector<std::string>&& names_, std::vector<Type>&& types_)
     if (names.size() != types.size()) {
         throw std::runtime_error("schema names and types sizes differ");
     }
+    for (size_t i = 0; i < column_count; ++i) {
+        name_to_index[names[i]] = i;
+    }
 }
 
 
@@ -39,6 +42,7 @@ std::string_view TypeToString(Type t) {
 void Schema::ReadSchema(Reader& type_reader, size_t column_count_) {
     names.clear();
     types.clear();
+    name_to_index.clear();
     column_count = 0;
     std::vector<std::string> res;
     size_t i = 0;
@@ -49,6 +53,7 @@ void Schema::ReadSchema(Reader& type_reader, size_t column_count_) {
         if (res.size() != 2) {
             throw std::runtime_error("bad schema was given");
         }
+        name_to_index[res[0]] = i;
         names.push_back(std::move(res[0]));
         types.push_back(ValidateType(res[1]));
         ++i;
@@ -101,6 +106,7 @@ void Schema::PrintSchema(Writer& writer) const {
 void Schema::AddColumn(const std::string& name, Type type) {
     names.push_back(name);
     types.push_back(type);
+    name_to_index[name] = column_count;
     ++column_count;
 }
 
@@ -119,19 +125,13 @@ Type Schema::ColumnTypeAt(size_t column_index) const {
 }
 
 std::optional<std::pair<Type, size_t>> Schema::GetTypeAndPos(const std::string& name) const {
-    for (size_t i = 0; i < column_count; ++i) {
-        if (names[i] == name) {
-            return std::make_pair(types[i], i);
-        }
+    auto it = name_to_index.find(name);
+    if (it == name_to_index.end()) {
+        return std::nullopt;
     }
-    return std::nullopt;
+    return std::make_pair(types[it->second], it->second);
 }
 
 bool Schema::HasColumn(const std::string& name) const {
-    for (size_t i = 0; i < column_count; ++i) {
-        if (names[i] == name) {
-            return true;
-        }
-    }
-    return false;
+    return name_to_index.find(name) != name_to_index.end();
 }

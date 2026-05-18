@@ -1,5 +1,6 @@
 #include "engine/data_storage/column.h"
 #include <stdexcept>
+#include <string>
 
 template <typename T>
 void PrintVisitor(Writer& w, const std::vector<T>& v) {
@@ -19,6 +20,36 @@ void PrintElemVisitor(Writer& w, const std::vector<T>& v, size_t i, bool b) {
 
 namespace {
 bool LikeCompare(std::string_view value, std::string_view pattern) {
+    if (pattern.find('_') == std::string_view::npos) {
+        const size_t first_pct = pattern.find('%');
+
+        if (first_pct == std::string_view::npos) {
+            return value == pattern;
+        }
+
+        const size_t last_pct  = pattern.rfind('%');
+        const std::string_view prefix = pattern.substr(0, first_pct);
+        const std::string_view suffix = pattern.substr(last_pct + 1);
+        const std::string_view inner  = pattern.substr(first_pct + 1, last_pct - first_pct - 1);
+
+        if (inner.find('%') == std::string_view::npos) {
+            if (!value.starts_with(prefix)) return false;
+            if (!value.ends_with(suffix))   return false;
+            if (value.size() < prefix.size() + suffix.size()) return false;
+
+            if (first_pct == last_pct) {
+                return true;
+            }
+
+            if (inner.empty()) return true;
+            const std::string_view mid = value.substr(
+                prefix.size(),
+                value.size() - prefix.size() - suffix.size()
+            );
+            return mid.find(inner) != std::string_view::npos;
+        }
+    }
+
     std::vector<bool> previous(pattern.size() + 1, false);
     std::vector<bool> current(pattern.size() + 1, false);
     previous[0] = true;
@@ -126,8 +157,8 @@ std::string StrColumn::GetElemToString(size_t index) const {
     return data[index];
 }
 
-void StrColumn::Accept(ColumnVisitor& visitor) const {
-    visitor.Visit(*this);
+void StrColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
+    visitor.Visit(*this, ind);
 }
 
 size_t StrColumn::Size() const {
@@ -159,18 +190,25 @@ const std::vector<std::string>& StrColumn::Data() const {
     return data;
 }
 
+std::string StrColumn::ValueAt(size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in ValueAt");
+    }
+    return data[index];
+}
+
 std::shared_ptr<Column> TimeStampColumn::CopyReordered(const std::vector<size_t>& ordered) const {
     return std::make_shared<TimeStampColumn>(column_detail::CopyReorderedValues(data, ordered));
 }
 
-void TimeStampColumn::Accept(ColumnVisitor& visitor) const {
-    visitor.Visit(*this);
+void TimeStampColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
+    visitor.Visit(*this, ind);
 }
 
 std::shared_ptr<Column> DateColumn::CopyReordered(const std::vector<size_t>& ordered) const {
     return std::make_shared<DateColumn>(column_detail::CopyReorderedValues(data, ordered));
 }
 
-void DateColumn::Accept(ColumnVisitor& visitor) const {
-    visitor.Visit(*this);
+void DateColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
+    visitor.Visit(*this, ind);
 }

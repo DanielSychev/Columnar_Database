@@ -9,38 +9,34 @@
 
 
 struct DateMinMaxVisitor : public ColumnVisitor {
-    // template <typename ColumnT>
     void NumericVisit() {
         throw std::runtime_error("date function for non-date column");
     }
 
     template <typename ColumnT>
-    void DateOrTimeVisit(const ColumnT& col) {
-        const auto& data = col.Data();
-        for (auto& elem : data) {
-            if (max.empty() || elem > max) {
-                max = elem;
+    void DateOrTimeVisit(const ColumnT& col, size_t ind) {
+        if (ind == -1u) {
+            for (const auto& elem : col.Data()) {
+                if (max.empty() || elem > max) max = elem;
+                if (min.empty() || elem < min) min = elem;
             }
-            if (min.empty() || elem < min) {
-                min = elem;
-            }
+        } else {
+            const auto elem = col.ValueAt(ind);
+            if (max.empty() || elem > max) max = elem;
+            if (min.empty() || elem < min) min = elem;
         }
     }
 
-    void Visit(const Int8Column&) override { NumericVisit(); }
-    void Visit(const Int16Column&) override { NumericVisit(); }
-    void Visit(const Int32Column&) override { NumericVisit(); }
-    void Visit(const Int64Column&) override { NumericVisit(); }
-    void Visit(const Int128Column&) override { NumericVisit(); }
-    void Visit(const DoubleColumn&) override { NumericVisit(); }
+    void Visit(const Int8Column&, size_t) override { NumericVisit(); }
+    void Visit(const Int16Column&, size_t) override { NumericVisit(); }
+    void Visit(const Int32Column&, size_t) override { NumericVisit(); }
+    void Visit(const Int64Column&, size_t) override { NumericVisit(); }
+    void Visit(const Int128Column&, size_t) override { NumericVisit(); }
+    void Visit(const DoubleColumn&, size_t) override { NumericVisit(); }
 
-    void Visit(const StrColumn& col) override { // не баг а патч, новая мета я бы сказал (потом переименую визитор в str_min_max_visitor)
-        // throw std::runtime_error("date function for string");
-        DateOrTimeVisit(col);
-    }
-
-    void Visit(const DateColumn& col) override { DateOrTimeVisit(col); }
-    void Visit(const TimeStampColumn& col) override { DateOrTimeVisit(col); }
+    void Visit(const StrColumn& col, size_t ind) override { DateOrTimeVisit(col, ind); }
+    void Visit(const DateColumn& col, size_t ind) override { DateOrTimeVisit(col, ind); }
+    void Visit(const TimeStampColumn& col, size_t ind) override { DateOrTimeVisit(col, ind); }
 
     std::string_view Max() const {
         if (max.empty()) {

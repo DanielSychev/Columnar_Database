@@ -154,3 +154,7 @@ void Batch::ValidateColumnIndex(size_t column_index, size_t row_count) const {
         throw std::runtime_error("too many rows for batch");
     }
 }
+
+bool Batch::HasMask() const {
+    return !banned_rows.empty();
+}

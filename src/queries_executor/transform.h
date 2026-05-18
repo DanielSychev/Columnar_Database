@@ -4,7 +4,7 @@
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/schema.h"
 #include <memory>
-#include <regex>
+#include <re2/re2.h>
 #include <string>
 #include <set>
 
@@ -31,6 +31,16 @@ private:
     std::string source_column_name;
 };
 
+struct DateTruncMinuteTransform : public Transform {
+    DateTruncMinuteTransform(const std::string& source_column_name_, const std::string& result_name = "");
+
+    Type ResultType(const Schema& input_schema) const override;
+    std::shared_ptr<Column> Apply(const Batch& batch) const override;
+
+private:
+    std::string source_column_name;
+};
+
 struct LengthTransform : public Transform {
     LengthTransform(const std::string& source_column_name_, const std::string& result_name = "");
 
@@ -49,7 +59,7 @@ struct RegexpReplaceTransform : public Transform {
 
 private:
     std::string source_column_name;
-    std::regex regex_pattern;
+    re2::RE2 regex_pattern;
     std::string replacement;
 };
 

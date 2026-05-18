@@ -1,9 +1,9 @@
 #include "queries_executor/transform.h"
 #include "queries_executor/helpers.h"
+#include <re2/re2.h>
 #include <utils.h>
 #include <cstdint>
 #include <numeric>
-#include <regex>
 #include <stdexcept>
 #include <string_view>
 
@@ -18,6 +18,17 @@ int64_t ParseMinute(std::string_view timestamp) {
         throw std::runtime_error("wrong minute format for ExtractMinuteTransform");
     }
     return static_cast<int64_t>((tens - '0') * 10 + (ones - '0'));
+}
+
+std::string TruncateTimestampToMinute(std::string_view timestamp) {
+    if (timestamp.size() < 16 || timestamp[4] != '-' || timestamp[7] != '-' ||
+        timestamp[10] != ' ' || timestamp[13] != ':') {
+        throw std::runtime_error("wrong timestamp format for DateTruncMinuteTransform");
+    }
+
+    std::string truncated(timestamp.substr(0, 16));
+    truncated += ":00";
+    return truncated;
 }
 
 size_t ExpectSourceType(
@@ -36,16 +47,6 @@ size_t ExpectSourceType(
     }
     return column_index;
 }
-
-// Type GetSourceType(
-//     const Schema& schema,
-//     const std::string& source_column_name
-// ) {
-//     const auto [input_type, column_index] =
-//         queries_executor_detail::ResolveColumn(schema, source_column_name, "CheckSourceType");
-//     return input_type;
-// }
-
 
 template <typename ColumnT>
 const ColumnT& GetTypedColumn(
@@ -104,14 +105,53 @@ std::shared_ptr<Column> ExtractMinuteTransform::Apply(const Batch& batch) const 
         "ExtractMinuteTransform"
     );
     const auto& timestamp_column =
-        GetTypedColumn<TimeStampColumn>(batch, column_index, "TIMESTAMP", "ExtractMinuteTransform");
+        GetTypedColumn<StrColumn>(batch, column_index, "TIMESTAMP", "ExtractMinuteTransform");
 
-    std::vector<int64_t> minutes;
-    minutes.reserve(batch.RowsCount());
-    for (const auto& value : timestamp_column.Data()) {
-        minutes.push_back(ParseMinute(value));
+    const auto& data = timestamp_column.Data();
+    std::vector<int64_t> minutes(batch.RowsCount(), 0);
+    for (size_t j = 0; j < batch.RowsCount(); ++j) {
+        if (batch.HasMask() && batch.banned_rows[j]) continue;
+        minutes[j] = ParseMinute(data[j]);
     }
     return std::make_shared<Int64Column>(minutes);
+}
+
+DateTruncMinuteTransform::DateTruncMinuteTransform(const std::string& source_column_name_, const std::string& result_name_)
+    : Transform(result_name_), source_column_name(source_column_name_) {
+    if (result_name_.empty()) {
+        result_name = "DATE_TRUNC('minute', " + source_column_name_ + ")";
+    }
+}
+
+Type DateTruncMinuteTransform::ResultType(const Schema& input_schema) const {
+    ExpectSourceType(
+        input_schema,
+        source_column_name,
+        Type::timestamp,
+        "TIMESTAMP",
+        "DateTruncMinuteTransform"
+    );
+    return Type::timestamp;
+}
+
+std::shared_ptr<Column> DateTruncMinuteTransform::Apply(const Batch& batch) const {
+    const size_t column_index = ExpectSourceType(
+        batch.GetSchema(),
+        source_column_name,
+        Type::timestamp,
+        "TIMESTAMP",
+        "DateTruncMinuteTransform"
+    );
+    const auto& timestamp_column =
+        GetTypedColumn<StrColumn>(batch, column_index, "TIMESTAMP", "DateTruncMinuteTransform");
+
+    const auto& data = timestamp_column.Data();
+    std::vector<std::string> values(batch.RowsCount());
+    for (size_t j = 0; j < batch.RowsCount(); ++j) {
+        if (batch.HasMask() && batch.banned_rows[j]) continue;
+        values[j] = TruncateTimestampToMinute(data[j]);
+    }
+    return std::make_shared<TimeStampColumn>(std::move(values));
 }
 
 
@@ -142,10 +182,11 @@ std::shared_ptr<Column> LengthTransform::Apply(const Batch& batch) const {
         "LengthTransform"
     );
     const auto& str_column = GetTypedColumn<StrColumn>(batch, column_index, "STRING", "LengthTransform");
-    std::vector<int64_t> lengths;
-    lengths.reserve(batch.RowsCount());
-    for (const auto& value : str_column.Data()) {
-        lengths.push_back(static_cast<int64_t>(value.size()));
+    const auto& data = str_column.Data();
+    std::vector<int64_t> lengths(batch.RowsCount(), 0);
+    for (size_t j = 0; j < batch.RowsCount(); ++j) {
+        if (batch.HasMask() && batch.banned_rows[j]) continue;
+        lengths[j] = static_cast<int64_t>(data[j].size());
     }
     return std::make_shared<Int64Column>(lengths);
 }
@@ -179,10 +220,12 @@ std::shared_ptr<Column> RegexpReplaceTransform::Apply(const Batch& batch) const 
     );
     const auto& str_column =
         GetTypedColumn<StrColumn>(batch, column_index, "STRING", "RegexpReplaceTransform");
-    std::vector<std::string> values;
-    values.reserve(batch.RowsCount());
-    for (const auto& value : str_column.Data()) {
-        values.push_back(std::regex_replace(value, regex_pattern, replacement));
+    const auto& data = str_column.Data();
+    std::vector<std::string> values(batch.RowsCount());
+    for (size_t j = 0; j < batch.RowsCount(); ++j) {
+        if (batch.HasMask() && batch.banned_rows[j]) continue;
+        values[j] = data[j];
+        RE2::GlobalReplace(&values[j], regex_pattern, replacement);
     }
     return std::make_shared<StrColumn>(values);
 }
@@ -300,6 +343,11 @@ Type CaseWhenTransform::ResultType(const Schema& input_schema) const {
 std::shared_ptr<Column> CaseWhenTransform::Apply(const Batch& batch) const {
     std::vector<std::string> result(batch.RowsCount());
     std::vector<bool> condition(batch.RowsCount(), true);
+    if (batch.HasMask()) {
+        for (size_t j = 0; j < batch.RowsCount(); ++j) {
+            if (batch.banned_rows[j]) condition[j] = false;
+        }
+    }
     for (size_t i = 0; i < condition_column_names.size(); ++i) {
         const auto [column_type, column_index] =
             queries_executor_detail::ResolveColumn(batch.GetSchema(), condition_column_names[i], "CaseWhenTransform");
@@ -334,6 +382,7 @@ std::shared_ptr<Column> CaseWhenTransform::Apply(const Batch& batch) const {
     }
 
     for (size_t j = 0; j < batch.RowsCount(); ++j) {
+        if (batch.HasMask() && batch.banned_rows[j]) continue;
         if (condition[j]) {
             result[j] = true_column ? true_column->GetElemToString(j) : column_true;
             continue;
