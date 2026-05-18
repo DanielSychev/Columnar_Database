@@ -80,6 +80,7 @@ struct NumericFuncVisitor : public ColumnVisitor {
         if (cnt == 0) {
             return 0; // or throw an exception
         }
+        // legacy formula (dealt to return int64_t)
         // return result_is_double ? sum_d / cnt : static_cast<double>(sum_i) / cnt;
         return sum_i / cnt;
     }
@@ -91,10 +92,6 @@ struct NumericFuncVisitor : public ColumnVisitor {
     int64_t Min() const {
         return min_i;
     }
-
-    // bool ResultIsDouble() const {
-    //     return result_is_double;
-    // }
 
     __int128_t sum_i = 0;
     int64_t max_i = std::numeric_limits<int64_t>::lowest();

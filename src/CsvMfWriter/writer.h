@@ -7,7 +7,6 @@
 
 class Writer {
 public:
-    // Writer(const std::string& file_path, char delimetr = ',');
     explicit Writer(std::ostream& ss, char delimetr = ',');
     void WriteElem(int64_t x, bool);
     void WriteElem(std::string_view s, bool); // флаг bool = true, если ставим '\n'

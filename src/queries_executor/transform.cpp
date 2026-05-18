@@ -48,16 +48,6 @@ size_t ExpectSourceType(
     return column_index;
 }
 
-// Type GetSourceType(
-//     const Schema& schema,
-//     const std::string& source_column_name
-// ) {
-//     const auto [input_type, column_index] =
-//         queries_executor_detail::ResolveColumn(schema, source_column_name, "CheckSourceType");
-//     return input_type;
-// }
-
-
 template <typename ColumnT>
 const ColumnT& GetTypedColumn(
     const Batch& batch,

@@ -7,7 +7,6 @@
 #include "engine/data_storage/visitors/count_distinct_visitor.h"
 #include <memory>
 #include <optional>
-// #include <queries_executor/operator.h>
 
 struct Aggregation {
     Aggregation(std::string column_name_, std::string result_name_ = "") : column_name(column_name_), result_name(result_name_) {}
