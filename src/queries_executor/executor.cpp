@@ -217,19 +217,42 @@ public:
 private:
     struct GroupKey {
         std::vector<std::string> values;
-        bool operator==(const GroupKey& other) const {
-            return values == other.values;
-        }
+        // bool operator==(const GroupKey& other) const {
+        //     return values == other.values;
+        // }
+    };
+
+    struct GroupKeyView {
+        std::vector<std::string_view> values;
     };
 
     struct GroupKeyHash {
-        size_t operator()(const GroupKey& key) const {
+        using is_transparent = void;
+
+        static size_t CountHash(const auto& values) {
             size_t seed = 0;
-            for (const auto& s : key.values) {
-                seed ^= std::hash<std::string>{}(s) + 0x9e3779b9 + (seed << 6) + (seed >> 2); // тут мне помогли, ладно
+            for (const auto& s : values) {
+                seed ^= std::hash<std::string_view>{}(s) + 0x9e3779b9 + (seed << 6) + (seed >> 2); // тут мне помогли, ладно
             }
             return seed;
         }
+
+        size_t operator()(const GroupKey& key) const { return CountHash(key.values); }
+        size_t operator()(const GroupKeyView& key) const { return CountHash(key.values); }
+    };
+
+    struct GroupKeyEqual {
+        using is_transparent = void;
+
+        bool operator()(const GroupKey& a, const GroupKey& b) const { return a.values == b.values; }
+        bool operator()(const GroupKeyView& a, const GroupKey& b) const {
+            if (a.values.size() != b.values.size()) return false;
+            for (size_t i = 0; i < a.values.size(); ++i) {
+                if (a.values[i] != b.values[i]) return false;
+            }
+            return true;
+        }
+        bool operator()(const GroupKey& a, const GroupKeyView& b) const { return (*this)(b, a); }
     };
 
     void InitializeGroupByColumns(const std::shared_ptr<Batch>& batch) {
@@ -241,25 +264,56 @@ private:
             );
             result_schema.AddColumn(column_name, type);
             group_by_positions.push_back(column_position);
+            group_by_is_string.push_back(type == Type::str || type == Type::timestamp || type == Type::date);
         }
     }
 
     void RunGroupAggregations(const std::shared_ptr<Batch>& batch) {
+        std::vector<std::string> temp_strings;
+        temp_strings.reserve(group_by_positions.size());
+        GroupKeyView view_key;
+        view_key.values.reserve(group_by_positions.size());
         for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
             if (batch->HasMask() && batch->banned_rows[row_index]) {
                 continue;
             }
-            GroupKey current_group_key;
-            for (auto& column_index: group_by_positions) {
-                current_group_key.values.push_back(batch->ColumnAt(column_index).GetElemToString(row_index));
-            }
-            auto& aggs = groups_aggs[current_group_key];
-            if (aggs.empty()) {
-                for (const auto& aggr: group_by_operator_->aggs) {
-                    aggs.push_back(aggr->Clone());
+            temp_strings.clear();
+            view_key.values.clear();
+            
+            for (size_t i = 0; i < group_by_positions.size(); ++i) {
+                if (group_by_is_string[i]) {
+                    const auto& str_col = static_cast<const StrColumn&>(batch->ColumnAt(group_by_positions[i]));
+                    view_key.values.push_back(str_col.Data()[row_index]);
+                } else {
+                    temp_strings.push_back(batch->ColumnAt(group_by_positions[i]).GetElemToString(row_index));
+                    view_key.values.push_back(temp_strings.back());
                 }
             }
-            for (auto& aggr: aggs) {
+
+            // GroupKey current_group_key;
+            // for (auto& column_index: group_by_positions) {
+            //     current_group_key.values.push_back(batch->ColumnAt(column_index).GetElemToString(row_index));
+            // }
+            // auto& aggs = groups_aggs[current_group_key];
+            // if (aggs.empty()) {
+            //     for (const auto& aggr: group_by_operator_->aggs) {
+            //         aggs.push_back(aggr->Clone());
+            //     }
+            // }
+            
+            auto it = groups_aggs.find(view_key);
+            if (it == groups_aggs.end()) {
+                GroupKey owning_key;
+                for (const auto& sv : view_key.values) {
+                    owning_key.values.emplace_back(sv);
+                }
+                it = groups_aggs.emplace(std::move(owning_key), std::vector<std::shared_ptr<Aggregation>>{}).first;
+                for (const auto& aggr: group_by_operator_->aggs) {
+                    it->second.push_back(aggr->Clone());
+                }
+            }
+
+            for (auto& aggr: it->second) {
                 aggr->RunRow(batch, row_index);
             }
         }
@@ -288,10 +342,12 @@ private:
 
     std::shared_ptr<GroupByOperator> group_by_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
+    std::vector<bool> group_by_is_string;
+    std::unordered_map<GroupKey, std::vector<std::shared_ptr<Aggregation>>, GroupKeyHash, GroupKeyEqual> groups_aggs;
     bool was_produced = false;
     Schema result_schema;
     std::vector<size_t> group_by_positions;
-    std::unordered_map<GroupKey, std::vector<std::shared_ptr<Aggregation>>, GroupKeyHash> groups_aggs;
+    // std::unordered_map<GroupKey, std::vector<std::shared_ptr<Aggregation>>, GroupKeyHash> groups_aggs;
 };
 
 class OrderByExecutor : public PipelineExecutor {
