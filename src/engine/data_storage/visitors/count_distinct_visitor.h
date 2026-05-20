@@ -7,6 +7,7 @@
 
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/visitors/visitor.h"
+#include "utils.h"
 
 struct CountDistinctVisitor : public ColumnVisitor {
     template <typename ColumnT>
@@ -58,20 +59,20 @@ struct CountDistinctVisitor : public ColumnVisitor {
     void Visit(const DateColumn& col, size_t ind) override {
         if (ind == -1u) {
             for (const auto& elem : col.Data()) {
-                string_values.insert(elem);
+                integral_values.insert(DateToInt32(elem));
             }
         } else {
-            string_values.insert(col.ValueAt(ind));
+            integral_values.insert(DateToInt32(col.ValueAt(ind)));
         }
     }
 
     void Visit(const TimeStampColumn& col, size_t ind) override {
         if (ind == -1u) {
             for (const auto& elem : col.Data()) {
-                string_values.insert(elem);
+                integral_values.insert(TimeStampToInt64(elem));
             }
         } else {
-            string_values.insert(col.ValueAt(ind));
+            integral_values.insert(TimeStampToInt64(col.ValueAt(ind)));
         }
     }
 
