@@ -1,4 +1,5 @@
 #include "queries_executor/transform.h"
+#include "engine/data_storage/column.h"
 #include "queries_executor/helpers.h"
 #include <re2/re2.h>
 #include <utils.h>
@@ -8,28 +9,28 @@
 #include <string_view>
 
 namespace {
-int64_t ParseMinute(std::string_view timestamp) {
-    if (timestamp.size() < 16 || timestamp[13] != ':') {
-        throw std::runtime_error("wrong timestamp format for ExtractMinuteTransform");
-    }
-    const char tens = timestamp[14];
-    const char ones = timestamp[15];
-    if (tens < '0' || tens > '5' || ones < '0' || ones > '9') {
-        throw std::runtime_error("wrong minute format for ExtractMinuteTransform");
-    }
-    return static_cast<int64_t>((tens - '0') * 10 + (ones - '0'));
-}
+// int64_t ParseMinute(std::string_view timestamp) {
+//     if (timestamp.size() < 16 || timestamp[13] != ':') {
+//         throw std::runtime_error("wrong timestamp format for ExtractMinuteTransform");
+//     }
+//     const char tens = timestamp[14];
+//     const char ones = timestamp[15];
+//     if (tens < '0' || tens > '5' || ones < '0' || ones > '9') {
+//         throw std::runtime_error("wrong minute format for ExtractMinuteTransform");
+//     }
+//     return static_cast<int64_t>((tens - '0') * 10 + (ones - '0'));
+// }
 
-std::string TruncateTimestampToMinute(std::string_view timestamp) {
-    if (timestamp.size() < 16 || timestamp[4] != '-' || timestamp[7] != '-' ||
-        timestamp[10] != ' ' || timestamp[13] != ':') {
-        throw std::runtime_error("wrong timestamp format for DateTruncMinuteTransform");
-    }
+// std::string TruncateTimestampToMinute(std::string_view timestamp) {
+//     if (timestamp.size() < 16 || timestamp[4] != '-' || timestamp[7] != '-' ||
+//         timestamp[10] != ' ' || timestamp[13] != ':') {
+//         throw std::runtime_error("wrong timestamp format for DateTruncMinuteTransform");
+//     }
 
-    std::string truncated(timestamp.substr(0, 16));
-    truncated += ":00";
-    return truncated;
-}
+//     std::string truncated(timestamp.substr(0, 16));
+//     truncated += ":00";
+//     return truncated;
+// }
 
 size_t ExpectSourceType(
     const Schema& schema,
@@ -105,13 +106,13 @@ std::shared_ptr<Column> ExtractMinuteTransform::Apply(const Batch& batch) const 
         "ExtractMinuteTransform"
     );
     const auto& timestamp_column =
-        GetTypedColumn<StrColumn>(batch, column_index, "TIMESTAMP", "ExtractMinuteTransform");
+        GetTypedColumn<TimeStampColumn>(batch, column_index, "TIMESTAMP", "ExtractMinuteTransform");
 
     const auto& data = timestamp_column.Data();
     std::vector<int64_t> minutes(batch.RowsCount(), 0);
     for (size_t j = 0; j < batch.RowsCount(); ++j) {
         if (batch.HasMask() && batch.banned_rows[j]) continue;
-        minutes[j] = ParseMinute(data[j]);
+        minutes[j] = data[j].m;
     }
     return std::make_shared<Int64Column>(minutes);
 }
@@ -143,13 +144,14 @@ std::shared_ptr<Column> DateTruncMinuteTransform::Apply(const Batch& batch) cons
         "DateTruncMinuteTransform"
     );
     const auto& timestamp_column =
-        GetTypedColumn<StrColumn>(batch, column_index, "TIMESTAMP", "DateTruncMinuteTransform");
+        GetTypedColumn<TimeStampColumn>(batch, column_index, "TIMESTAMP", "DateTruncMinuteTransform");
 
     const auto& data = timestamp_column.Data();
-    std::vector<std::string> values(batch.RowsCount());
+    std::vector<TimeStamp> values(batch.RowsCount());
     for (size_t j = 0; j < batch.RowsCount(); ++j) {
         if (batch.HasMask() && batch.banned_rows[j]) continue;
-        values[j] = TruncateTimestampToMinute(data[j]);
+        values[j] = data[j];
+        values[j].s = 0;
     }
     return std::make_shared<TimeStampColumn>(std::move(values));
 }

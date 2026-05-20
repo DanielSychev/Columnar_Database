@@ -46,7 +46,7 @@ public:
         for (size_t i = 0; i < query_schema.NumColumns(); ++i) {
             data_reader->SetPos(column_starts[column_positions[i]]);
             Column& column = batch->ColumnAt(i);
-            column.Read(*data_reader);
+            column.ReadMf(*data_reader);
             batch->SetRowsCount(column.Size());
         }
         ++next_batch_index;
@@ -264,7 +264,7 @@ private:
             );
             result_schema.AddColumn(column_name, type);
             group_by_positions.push_back(column_position);
-            group_by_is_string.push_back(type == Type::str || type == Type::timestamp || type == Type::date);
+            group_by_is_string.push_back(type == Type::str);
         }
     }
 

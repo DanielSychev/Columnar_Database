@@ -212,10 +212,12 @@ void MaxAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
 }
 
 std::string MaxAggregation::GetResultValue() const {
-    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str)) {
-        return std::string(date_visitor.Max());
-    }
-
+    if (input_type.has_value() && input_type.value() == Type::date)
+        return DateToString(Int32ToDate(date_visitor.MaxDate()));
+    if (input_type.has_value() && input_type.value() == Type::timestamp)
+        return TimeStampToString(Int64ToTimeStamp(date_visitor.MaxTimestamp()));
+    if (input_type.has_value() && input_type.value() == Type::str)
+        return date_visitor.MaxStr();
     return std::to_string(numeric_visitor.Max());
 }
 
@@ -271,10 +273,12 @@ void MinAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
 }
 
 std::string MinAggregation::GetResultValue() const {
-    if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str)) {
-        return std::string(date_visitor.Min());
-    }
-
+    if (input_type.has_value() && input_type.value() == Type::date)
+        return DateToString(Int32ToDate(date_visitor.MinDate()));
+    if (input_type.has_value() && input_type.value() == Type::timestamp)
+        return TimeStampToString(Int64ToTimeStamp(date_visitor.MinTimestamp()));
+    if (input_type.has_value() && input_type.value() == Type::str)
+        return date_visitor.MinStr();
     return std::to_string(numeric_visitor.Min());
 }
 
