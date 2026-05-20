@@ -20,7 +20,7 @@ bool ReadCsvBatch(Reader& reader, Batch& batch) {
 bool ReadMfBatch(Reader& reader, Batch& batch) {
     for (size_t i = 0; i < batch.ColumnsCount(); ++i) {
         Column& column = batch.ColumnAt(i);
-        column.Read(reader);
+        column.ReadMf(reader);
         batch.SetRowsCount(column.Size());
     }
     return !batch.Empty();
@@ -31,7 +31,7 @@ size_t WriteMfBatch(const Batch& batch, Writer& writer) {
     std::vector<size_t> column_starts(columns_count);
     for (size_t i = 0; i < columns_count; ++i) {
         column_starts[i] = writer.TellPos();
-        batch.ColumnAt(i).Print(writer);
+        batch.ColumnAt(i).PrintMf(writer);
     }
     // writing batch meta
     size_t meta_pos = writer.TellPos();
@@ -49,7 +49,7 @@ void WriteCsvBatch(const Batch& batch, Writer& writer) {
             continue;
         }
         for (size_t column_index = 0; column_index < columns_count; ++column_index) {
-            batch.ColumnAt(column_index).PrintElem(writer, row_index, column_index == columns_count - 1);
+            batch.ColumnAt(column_index).PrintElemCsv(writer, row_index, column_index == columns_count - 1);
         }
     }
 }
