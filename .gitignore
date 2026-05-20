@@ -19,3 +19,6 @@ src/TestFiles/*_output.csv
 .clangd
 
 src/TestFiles
+
+*results*
+Dockerfile
