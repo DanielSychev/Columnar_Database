@@ -17,9 +17,9 @@
 class Column {
 public:
     virtual void AddElem(std::string&&) = 0; // чтобы move делать
-    virtual void Print(Writer&) const = 0;
-    virtual void Read(Reader&) = 0;
-    virtual void PrintElem(Writer&, size_t, bool) const = 0;
+    virtual void PrintMf(Writer&) const = 0;
+    virtual void ReadMf(Reader&) = 0;
+    virtual void PrintElemCsv(Writer&, size_t, bool) const = 0;
     virtual std::string GetElemToString(size_t index) const = 0;
     virtual void Accept(ColumnVisitor& visitor, size_t ind = -1u) const = 0;
     virtual bool Compare(const std::string&, size_t, CompareSign) const = 0;
@@ -204,15 +204,15 @@ public:
         data.push_back(column_detail::ParseNumeric<T>(value));
     }
 
-    void Print(Writer& writer) const override {
+    void PrintMf(Writer& writer) const override {
         writer.BinaryWriteVector(data);
     }
 
-    void Read(Reader& reader) override {
+    void ReadMf(Reader& reader) override {
         reader.BinaryReadVector(data);
     }
 
-    void PrintElem(Writer& writer, size_t index, bool is_last) const override {
+    void PrintElemCsv(Writer& writer, size_t index, bool is_last) const override {
         if (index >= data.size()) { // not bug, a feature
             return;
         }
@@ -314,9 +314,9 @@ public:
     StrColumn(std::vector<std::string>&& data_) : data(std::move(data_)) {}
     StrColumn(const StrColumn& other, const std::vector<bool>& banned);
     void AddElem(std::string&&) override;
-    void Print(Writer&) const override;
-    void Read(Reader&) override;
-    void PrintElem(Writer&, size_t, bool) const override;
+    void PrintMf(Writer&) const override;
+    void ReadMf(Reader&) override;
+    void PrintElemCsv(Writer&, size_t, bool) const override;
     std::string GetElemToString(size_t index) const override;
     void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
     bool Compare(const std::string&, size_t, CompareSign) const override;
@@ -330,26 +330,47 @@ protected:
     std::vector<std::string> data;
 };
 
-class TimeStampColumn : public StrColumn {
-public:
-    TimeStampColumn() = default;
-    TimeStampColumn(const std::vector<std::string>& data_) : StrColumn(data_) {}
-    TimeStampColumn(std::vector<std::string>&& data_) : StrColumn(std::move(data_)) {}
-    TimeStampColumn(const TimeStampColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
-    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
-    ~TimeStampColumn() override = default;
-private:
-};
-
-class DateColumn : public StrColumn {
+class DateColumn : public Column {
 public:
     DateColumn() = default;
-    DateColumn(const std::vector<std::string>& data_) : StrColumn(data_) {}
-    DateColumn(std::vector<std::string>&& data_) : StrColumn(std::move(data_)) {}
-    DateColumn(const DateColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
+    DateColumn(const std::vector<Date>& data_) : data(data_) {}
+    explicit DateColumn(const std::vector<std::string>& values);
+    void AddElem(std::string&&) override;
+    void PrintMf(Writer&) const override;
+    void ReadMf(Reader&) override;
+    void PrintElemCsv(Writer&, size_t, bool) const override;
+    std::string GetElemToString(size_t index) const override;
     void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
+    bool Compare(const std::string&, size_t, CompareSign) const override;
+    std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
+    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
+    size_t Size() const override;
+    const std::vector<Date>& Data() const;
+    Date ValueAt(size_t index) const;
     ~DateColumn() override = default;
 private:
+    std::vector<Date> data;
+};
+
+class TimeStampColumn : public Column {
+public:
+    TimeStampColumn() = default;
+    TimeStampColumn(const std::vector<TimeStamp>& data_) : data(data_) {}
+    TimeStampColumn(std::vector<TimeStamp>&& data_) : data(std::move(data_)) {}
+    explicit TimeStampColumn(const std::vector<std::string>& values);
+    void AddElem(std::string&&) override;
+    void PrintMf(Writer&) const override;
+    void ReadMf(Reader&) override;
+    void PrintElemCsv(Writer&, size_t, bool) const override;
+    std::string GetElemToString(size_t index) const override;
+    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
+    bool Compare(const std::string&, size_t, CompareSign) const override;
+    std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
+    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
+    size_t Size() const override;
+    const std::vector<TimeStamp>& Data() const;
+    TimeStamp ValueAt(size_t index) const;
+    ~TimeStampColumn() override = default;
+private:
+    std::vector<TimeStamp> data;
 };

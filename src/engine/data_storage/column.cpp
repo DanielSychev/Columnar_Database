@@ -1,4 +1,5 @@
 #include "engine/data_storage/column.h"
+#include "utils.h"
 #include <stdexcept>
 #include <string>
 
@@ -136,17 +137,17 @@ void StrColumn::AddElem(std::string&& s) {
 StrColumn::StrColumn(const StrColumn& other, const std::vector<bool>& banned) :
 data(column_detail::CopyAllowedValues(other.data, banned)) {}
 
-void StrColumn::Print(Writer& w) const {
+void StrColumn::PrintMf(Writer& w) const {
     PrintVisitor(w, data);
 }
 
-void StrColumn::Read(Reader& r) {
+void StrColumn::ReadMf(Reader& r) {
     if (!r.ReadLine(data)) {
         throw std::runtime_error("wrong batch format");
     }
 }
 
-void StrColumn::PrintElem(Writer& w, size_t i, bool b) const {
+void StrColumn::PrintElemCsv(Writer& w, size_t i, bool b) const {
     PrintElemVisitor(w, data, i, b);
 }
 
@@ -159,10 +160,6 @@ std::string StrColumn::GetElemToString(size_t index) const {
 
 void StrColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
     visitor.Visit(*this, ind);
-}
-
-size_t StrColumn::Size() const {
-    return data.size();
 }
 
 bool StrColumn::Compare(const std::string& elem, size_t i, CompareSign sign) const {
@@ -186,6 +183,10 @@ std::shared_ptr<Column> StrColumn::CopyReordered(const std::vector<size_t>& orde
     return std::make_shared<StrColumn>(column_detail::CopyReorderedValues(data, ordered));
 }
 
+size_t StrColumn::Size() const {
+    return data.size();
+}
+
 const std::vector<std::string>& StrColumn::Data() const {
     return data;
 }
@@ -197,18 +198,219 @@ std::string StrColumn::ValueAt(size_t index) const {
     return data[index];
 }
 
-std::shared_ptr<Column> TimeStampColumn::CopyReordered(const std::vector<size_t>& ordered) const {
-    return std::make_shared<TimeStampColumn>(column_detail::CopyReorderedValues(data, ordered));
+
+void DateColumn::AddElem(std::string&& s) {
+    data.push_back(StringToDate(s));
 }
 
-void TimeStampColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
+DateColumn::DateColumn(const std::vector<std::string>& values) {
+    data.reserve(values.size());
+    for (const auto& s: values) {
+        data.push_back(StringToDate(s));
+    }
+}
+
+void DateColumn::PrintMf(Writer& writer) const {
+    writer.BinaryWriteVector(data);
+}
+
+void DateColumn::ReadMf(Reader& reader) {
+    reader.BinaryReadVector(data);
+}
+
+void DateColumn::PrintElemCsv(Writer& w, size_t i, bool b) const {
+    if (i >= data.size()) {
+        return;
+    }
+    return w.WriteElem(DateToString(data[i]), b);
+}
+
+std::string DateColumn::GetElemToString(size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in GetElemToString");
+    }
+    return DateToString(data[index]);
+}
+
+void DateColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
     visitor.Visit(*this, ind);
+}
+
+bool DateColumn::Compare(const std::string& elem, size_t i, CompareSign sign) const {
+    if (sign == CompareSign::IN) {
+        throw std::invalid_argument("IN sign is not supported for DateColumn");
+    }
+    if (sign == CompareSign::LIKE || sign == CompareSign::NOT_LIKE) {
+        throw std::invalid_argument("LIKE and NOT_LIKE are supported only for string columns");
+    }
+    Date d2 = StringToDate(elem);
+    return column_detail::BasicCompare(DateToInt32(data[i]), DateToInt32(d2), sign);
+}
+
+std::shared_ptr<Column> DateColumn::CopyFiltered(const std::vector<bool>& banned) const {
+    return std::make_shared<DateColumn>(column_detail::CopyAllowedValues(data, banned));
 }
 
 std::shared_ptr<Column> DateColumn::CopyReordered(const std::vector<size_t>& ordered) const {
     return std::make_shared<DateColumn>(column_detail::CopyReorderedValues(data, ordered));
 }
 
-void DateColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
+size_t DateColumn::Size() const {
+    return data.size();
+}
+
+const std::vector<Date>& DateColumn::Data() const {
+    return data;
+}
+
+Date DateColumn::ValueAt(size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in ValueAt");
+    }
+    return data[index];
+}
+
+
+
+
+
+
+std::string DateToString(const Date& date) {
+    return std::to_string(date.year) + "-" +
+           (date.month < 10 ? "0" : "") + std::to_string(date.month) + "-" +
+           (date.day < 10 ? "0" : "") + std::to_string(date.day);
+}
+
+Date StringToDate(const std::string& s) {
+    if (s.size() != 10 || s[4] != '-' || s[7] != '-') {
+        throw std::invalid_argument("wrong date format");
+    }
+    Date date;
+    try {
+        date.year = std::stoi(s.substr(0, 4));
+        date.month = std::stoi(s.substr(5, 2));
+        date.day = std::stoi(s.substr(8, 2));
+    } catch (const std::exception& e) {
+        throw std::invalid_argument("wrong date format");
+    }
+    if (date.month < 1 || date.month > 12) {
+        throw std::invalid_argument("wrong month value in date");
+    }
+    if (date.day < 1 || date.day > 31) {
+        throw std::invalid_argument("wrong day value in date");
+    }
+    return date;
+}
+
+std::string TimeStampToString(const TimeStamp& timestamp) {
+    return DateToString(timestamp) + " " +
+           (timestamp.h < 10 ? "0" : "") + std::to_string(timestamp.h) + ":" +
+           (timestamp.m < 10 ? "0" : "") + std::to_string(timestamp.m) + ":" +
+           (timestamp.s < 10 ? "0" : "") + std::to_string(timestamp.s);
+}
+
+TimeStamp StringToTimeStamp(const std::string& s) {
+    if (s.size() != 19 || s[4] != '-' || s[7] != '-' || s[10] != ' ' || s[13] != ':' || s[16] != ':') {
+        throw std::invalid_argument("wrong timestamp format");
+    }
+    TimeStamp timestamp;
+    try {
+        timestamp.year = std::stoi(s.substr(0, 4));
+        timestamp.month = std::stoi(s.substr(5, 2));
+        timestamp.day = std::stoi(s.substr(8, 2));
+        timestamp.h = std::stoi(s.substr(11, 2));
+        timestamp.m = std::stoi(s.substr(14, 2));
+        timestamp.s = std::stoi(s.substr(17, 2));
+    } catch (const std::exception& e) {
+        throw std::invalid_argument("wrong timestamp format");
+    }
+    if (timestamp.month < 1 || timestamp.month > 12) {
+        throw std::invalid_argument("wrong month value in timestamp");
+    }
+    if (timestamp.day < 1 || timestamp.day > 31) {
+        throw std::invalid_argument("wrong day value in timestamp");
+    }
+    if (timestamp.h < 0 || timestamp.h > 23) {
+        throw std::invalid_argument("wrong hour value in timestamp");
+    }
+    if (timestamp.m < 0 || timestamp.m > 59) {
+        throw std::invalid_argument("wrong minute value in timestamp");
+    }
+    if (timestamp.s < 0 || timestamp.s > 59) {
+        throw std::invalid_argument("wrong second value in timestamp");
+    }
+    return timestamp;
+}
+
+
+TimeStampColumn::TimeStampColumn(const std::vector<std::string>& values) {
+    data.reserve(values.size());
+    for (const auto& s : values) {
+        data.push_back(StringToTimeStamp(s));
+    }
+}
+
+void TimeStampColumn::AddElem(std::string&& s) {
+    data.push_back(StringToTimeStamp(s));
+}
+
+void TimeStampColumn::PrintMf(Writer& writer) const {
+    writer.BinaryWriteVector(data);
+}
+
+void TimeStampColumn::ReadMf(Reader& reader) {
+    reader.BinaryReadVector(data);
+}
+
+void TimeStampColumn::PrintElemCsv(Writer& w, size_t i, bool b) const {
+    if (i >= data.size()) {
+        return;
+    }
+    w.WriteElem(TimeStampToString(data[i]), b);
+}
+
+std::string TimeStampColumn::GetElemToString(size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in GetElemToString");
+    }
+    return TimeStampToString(data[index]);
+}
+
+void TimeStampColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
     visitor.Visit(*this, ind);
 }
+
+bool TimeStampColumn::Compare(const std::string& elem, size_t i, CompareSign sign) const {
+    if (sign == CompareSign::IN) {
+        throw std::invalid_argument("IN sign is not supported for TimeStampColumn");
+    }
+    if (sign == CompareSign::LIKE || sign == CompareSign::NOT_LIKE) {
+        throw std::invalid_argument("LIKE and NOT_LIKE are supported only for string columns");
+    }
+    TimeStamp ts2 = StringToTimeStamp(elem);
+    return column_detail::BasicCompare(TimeStampToInt64(data[i]), TimeStampToInt64(ts2), sign);
+}
+
+std::shared_ptr<Column> TimeStampColumn::CopyFiltered(const std::vector<bool>& banned) const {
+    return std::make_shared<TimeStampColumn>(column_detail::CopyAllowedValues(data, banned));
+}
+
+std::shared_ptr<Column> TimeStampColumn::CopyReordered(const std::vector<size_t>& ordered) const {
+    return std::make_shared<TimeStampColumn>(column_detail::CopyReorderedValues(data, ordered));
+}
+
+size_t TimeStampColumn::Size() const {
+    return data.size();
+}
+
+const std::vector<TimeStamp>& TimeStampColumn::Data() const {
+    return data;
+}
+
+TimeStamp TimeStampColumn::ValueAt(size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in ValueAt");
+    }
+    return data[index];
+}
+
