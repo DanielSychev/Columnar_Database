@@ -15,12 +15,13 @@ struct DateMinMaxVisitor : public ColumnVisitor {
 
     void StrVisit(const StrColumn& col, size_t ind) {
         if (ind == -1u) {
-            for (const auto& elem : col.Data()) {
+            for (size_t i = 0; i < col.Size(); ++i) {
+                const auto elem = col.GetElemView(i);
                 if (max_str.empty() || elem > max_str) max_str = elem;
                 if (min_str.empty() || elem < min_str) min_str = elem;
             }
         } else {
-            const auto elem = col.ValueAt(ind);
+            const auto elem = col.GetElemView(ind);
             if (max_str.empty() || elem > max_str) max_str = elem;
             if (min_str.empty() || elem < min_str) min_str = elem;
         }

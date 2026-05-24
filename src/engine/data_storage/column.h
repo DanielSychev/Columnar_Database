@@ -310,24 +310,27 @@ using DoubleColumn = NumericColumn<double>;
 class StrColumn : public Column {
 public:
     StrColumn() = default;
-    StrColumn(const std::vector<std::string>& data_) : data(data_) {}
-    StrColumn(std::vector<std::string>&& data_) : data(std::move(data_)) {}
+    explicit StrColumn(const std::vector<std::string>& data_);
+    explicit StrColumn(std::vector<std::string>&& data_);
     StrColumn(const StrColumn& other, const std::vector<bool>& banned);
     void AddElem(std::string&&) override;
     void PrintMf(Writer&) const override;
     void ReadMf(Reader&) override;
     void PrintElemCsv(Writer&, size_t, bool) const override;
     std::string GetElemToString(size_t index) const override;
+    std::string_view GetElemView(size_t index) const;
     void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
     bool Compare(const std::string&, size_t, CompareSign) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
-    const std::vector<std::string>& Data() const;
     std::string ValueAt(size_t index) const;
+    StrColumn(std::vector<char>&& buf_, std::vector<size_t>&& offsets_, size_t count_);
     ~StrColumn() override = default;
-protected:
-    std::vector<std::string> data;
+private:
+    std::vector<char> buf;
+    std::vector<size_t> offsets{0};
+    size_t count = 0;
 };
 
 class DateColumn : public Column {

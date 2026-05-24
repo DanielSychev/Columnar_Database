@@ -283,7 +283,7 @@ private:
             for (size_t i = 0; i < group_by_positions.size(); ++i) {
                 if (group_by_is_string[i]) {
                     const auto& str_col = static_cast<const StrColumn&>(batch->ColumnAt(group_by_positions[i]));
-                    view_key.values.push_back(str_col.Data()[row_index]);
+                    view_key.values.push_back(str_col.GetElemView(row_index));
                 } else {
                     temp_strings.push_back(batch->ColumnAt(group_by_positions[i]).GetElemToString(row_index));
                     view_key.values.push_back(temp_strings.back());

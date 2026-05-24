@@ -162,11 +162,10 @@ std::shared_ptr<Column> LengthTransform::Apply(const Batch& batch) const {
         "LengthTransform"
     );
     const auto& str_column = GetTypedColumn<StrColumn>(batch, column_index, "STRING", "LengthTransform");
-    const auto& data = str_column.Data();
     std::vector<int64_t> lengths(batch.RowsCount(), 0);
     for (size_t j = 0; j < batch.RowsCount(); ++j) {
         if (batch.HasMask() && batch.banned_rows[j]) continue;
-        lengths[j] = static_cast<int64_t>(data[j].size());
+        lengths[j] = static_cast<int64_t>(str_column.GetElemView(j).size());
     }
     return std::make_shared<Int64Column>(lengths);
 }
@@ -200,11 +199,10 @@ std::shared_ptr<Column> RegexpReplaceTransform::Apply(const Batch& batch) const 
     );
     const auto& str_column =
         GetTypedColumn<StrColumn>(batch, column_index, "STRING", "RegexpReplaceTransform");
-    const auto& data = str_column.Data();
     std::vector<std::string> values(batch.RowsCount());
     for (size_t j = 0; j < batch.RowsCount(); ++j) {
         if (batch.HasMask() && batch.banned_rows[j]) continue;
-        values[j] = data[j];
+        values[j] = std::string(str_column.GetElemView(j));
         RE2::GlobalReplace(&values[j], regex_pattern, replacement);
     }
     return std::make_shared<StrColumn>(values);

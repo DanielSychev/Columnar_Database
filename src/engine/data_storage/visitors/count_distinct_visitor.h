@@ -48,11 +48,11 @@ struct CountDistinctVisitor : public ColumnVisitor {
 
     void Visit(const StrColumn& col, size_t ind) override {
         if (ind == -1u) {
-            for (const auto& elem : col.Data()) {
-                string_values.insert(elem);
+            for (size_t i = 0; i < col.Size(); ++i) {
+                string_values.emplace(col.GetElemView(i));
             }
         } else {
-            string_values.insert(col.ValueAt(ind));
+            string_values.emplace(col.GetElemView(ind));
         }
     }
 

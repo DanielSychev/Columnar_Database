@@ -130,32 +130,60 @@ std::shared_ptr<Column> CreateColumn(Type type, const std::vector<std::string>& 
     }
 }
 
-void StrColumn::AddElem(std::string&& s) {
-    data.push_back(std::move(s));
+StrColumn::StrColumn(const std::vector<std::string>& data_) : count(data_.size()) {
+    offsets.reserve(count + 1);
+    for (const auto& s : data_) {
+        buf.insert(buf.end(), s.begin(), s.end());
+        offsets.push_back(buf.size());
+    }
 }
 
-StrColumn::StrColumn(const StrColumn& other, const std::vector<bool>& banned) :
-data(column_detail::CopyAllowedValues(other.data, banned)) {}
+StrColumn::StrColumn(std::vector<std::string>&& data_) : StrColumn(data_) {}
+
+StrColumn::StrColumn(std::vector<char>&& buf_, std::vector<size_t>&& offsets_, size_t count_)
+    : buf(std::move(buf_)), offsets(std::move(offsets_)), count(count_) {}
+
+StrColumn::StrColumn(const StrColumn& other, const std::vector<bool>& banned) {
+    for (size_t i = 0; i < other.count; ++i) {
+        if (i < banned.size() && banned[i]) continue;
+        const auto sv = other.GetElemView(i);
+        buf.insert(buf.end(), sv.begin(), sv.end());
+        offsets.push_back(buf.size());
+        ++count;
+    }
+}
+
+void StrColumn::AddElem(std::string&& s) {
+    buf.insert(buf.end(), s.begin(), s.end());
+    offsets.push_back(buf.size());
+    ++count;
+}
 
 void StrColumn::PrintMf(Writer& w) const {
-    PrintVisitor(w, data);
+    w.BinaryWriteVector(offsets);
+    w.BinaryWriteVector(buf);
 }
 
 void StrColumn::ReadMf(Reader& r) {
-    if (!r.ReadLine(data)) {
-        throw std::runtime_error("wrong batch format");
-    }
+    r.BinaryReadVector(offsets);
+    r.BinaryReadVector(buf);
+    count = offsets.size() - 1;
 }
 
 void StrColumn::PrintElemCsv(Writer& w, size_t i, bool b) const {
-    PrintElemVisitor(w, data, i, b);
+    if (i >= count) return;
+    w.WriteElem(GetElemView(i), b);
 }
 
 std::string StrColumn::GetElemToString(size_t index) const {
-    if (index >= data.size()) {
+    if (index >= count) {
         throw std::out_of_range("index out of range in GetElemToString");
     }
-    return data[index];
+    return std::string(GetElemView(index));
+}
+
+std::string_view StrColumn::GetElemView(size_t index) const {
+    return { buf.data() + offsets[index], offsets[index + 1] - offsets[index] };
 }
 
 void StrColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
@@ -166,13 +194,14 @@ bool StrColumn::Compare(const std::string& elem, size_t i, CompareSign sign) con
     if (sign == CompareSign::IN) {
         throw std::runtime_error("IN sign is not supported for StrColumn");
     }
+    const auto sv = GetElemView(i);
     if (sign == CompareSign::LIKE) {
-        return LikeCompare(data[i], elem);
+        return LikeCompare(sv, elem);
     }
     if (sign == CompareSign::NOT_LIKE) {
-        return !LikeCompare(data[i], elem);
+        return !LikeCompare(sv, elem);
     }
-    return column_detail::BasicCompare(data[i], elem, sign);
+    return column_detail::BasicCompare(sv, std::string_view(elem), sign);
 }
 
 std::shared_ptr<Column> StrColumn::CopyFiltered(const std::vector<bool>& banned) const {
@@ -180,22 +209,27 @@ std::shared_ptr<Column> StrColumn::CopyFiltered(const std::vector<bool>& banned)
 }
 
 std::shared_ptr<Column> StrColumn::CopyReordered(const std::vector<size_t>& ordered) const {
-    return std::make_shared<StrColumn>(column_detail::CopyReorderedValues(data, ordered));
+    std::vector<char> new_buf;
+    std::vector<size_t> new_offsets;
+    new_offsets.reserve(ordered.size() + 1);
+    new_offsets.push_back(0);
+    for (size_t idx : ordered) {
+        const auto sv = GetElemView(idx);
+        new_buf.insert(new_buf.end(), sv.begin(), sv.end());
+        new_offsets.push_back(new_buf.size());
+    }
+    return std::make_shared<StrColumn>(std::move(new_buf), std::move(new_offsets), ordered.size());
 }
 
 size_t StrColumn::Size() const {
-    return data.size();
-}
-
-const std::vector<std::string>& StrColumn::Data() const {
-    return data;
+    return count;
 }
 
 std::string StrColumn::ValueAt(size_t index) const {
-    if (index >= data.size()) {
+    if (index >= count) {
         throw std::out_of_range("index out of range in ValueAt");
     }
-    return data[index];
+    return std::string(GetElemView(index));
 }
 
 
