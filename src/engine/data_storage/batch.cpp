@@ -53,7 +53,7 @@ void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
 
 void Batch::AddColumn(size_t column_index, std::shared_ptr<Column> column) {
     if (!column) {
-        throw std::runtime_error("column is null");
+        throw std::runtime_error("column pointer is null");
     }
     ValidateColumnIndex(column_index, column->Size());
 
@@ -66,7 +66,7 @@ void Batch::AddColumn(std::shared_ptr<Column> column) {
         throw std::runtime_error("cannot append column to batch with schema");
     }
     if (!column) {
-        throw std::runtime_error("column is null");
+        throw std::runtime_error("column pointer is null");
     }
 
     SetRowsCount(column->Size());
@@ -78,7 +78,7 @@ void Batch::AppendColumn(const std::string& name, Type type, std::shared_ptr<Col
         throw std::runtime_error("cannot append named column to batch without schema");
     }
     if (!column) {
-        throw std::runtime_error("column is null");
+        throw std::runtime_error("column pointer is null");
     }
 
     SetRowsCount(column->Size());

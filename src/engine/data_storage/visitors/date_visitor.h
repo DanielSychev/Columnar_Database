@@ -69,11 +69,11 @@ struct DateMinMaxVisitor : public ColumnVisitor {
     void Visit(const TimeStampColumn& col, size_t ind) override { TimeStampVisit(col, ind); }
 
     const std::string& MaxStr() const {
-        if (max_str.empty()) throw std::runtime_error("max is empty");
+        if (max_str.empty()) throw std::runtime_error("max date value is not set");
         return max_str;
     }
     const std::string& MinStr() const {
-        if (min_str.empty()) throw std::runtime_error("min is empty");
+        if (min_str.empty()) throw std::runtime_error("min date value is not set");
         return min_str;
     }
     int32_t MaxDate() const { return max_date; }

@@ -24,7 +24,7 @@ inline std::pair<Type, size_t> ResolveColumn(
 
 inline void CheckRow(std::shared_ptr<Batch> batch, size_t row_index) {
     if (!batch) {
-        throw std::runtime_error("expected batch");
+        throw std::runtime_error("batch pointer is null");
     }
     if (row_index >= batch->RowsCount()) {
         throw std::runtime_error("row index is out of batch bounds");
