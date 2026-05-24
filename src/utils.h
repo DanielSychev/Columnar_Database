@@ -7,9 +7,9 @@
 #include <type_traits>
 
 namespace Constants {
-    const size_t BATCH_SIZE = 100000;
+    const size_t BATCH_SIZE = 10000;
     const size_t MAX_COLUMN_COUNT = UINT32_MAX;
-    const size_t ORDER_BY_LIMIT = 1000;
+    const size_t ORDER_BY_NO_LIMIT = SIZE_MAX;
 }
 
 enum class CompareSign {
