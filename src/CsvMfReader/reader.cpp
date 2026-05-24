@@ -25,7 +25,10 @@ bool Reader::ReadLine(std::vector<std::string>& result) {
         } else if (in_quotes) {
             cur_string += c;
         } else {
-            if (c == '\n') {
+            if (c == '\n' || c == '\r' || c == '\f') {
+                if (c == '\r' && file_.peek() == '\n') {
+                    file_.get();
+                }
                 break;
             } else if (c == delimetr_) {
                 result.push_back(cur_string);
