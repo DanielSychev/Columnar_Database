@@ -8,22 +8,28 @@
 #include "engine/data_storage/schema.h"
 #include "utils.h"
 
-static std::ifstream EMPTY_INPUT_STREAM;
-static std::ofstream EMPTY_OUTPUT_STREAM;
-
-class Engine {
+class MfFileWriter {
 public:
-    Engine(std::ifstream& data_reader_stream, std::ofstream& data_writer_stream, std::ifstream& schema_reader_stream);
-    Engine(std::ifstream& data_reader_stream, std::ofstream& data_writer_stream, std::ofstream& schema_writer_stream);
-    void CsvToMfProcessor();
-    void MfToCsvProcessor();
+    MfFileWriter(std::ifstream& csv_stream, std::ofstream& mf_stream, std::ifstream& schema_stream);
+    void Convert();
 private:
-    void CsvToMfBatchProcessor(const Schema& schema);
-    void MfToCsvBatchProcessor(const Schema& schema);
-    Reader data_reader;
-    Writer data_writer;
-    Reader type_reader;
-    Writer type_writer;
-    const size_t batch_rows_count = Constants::BATCH_SIZE;
+    void ProcessBatches(const Schema& schema);
+    Reader csv_reader;
+    Writer mf_writer;
+    Reader schema_reader;
     std::vector<size_t> batch_meta_positions;
+    const size_t batch_rows_count = Constants::BATCH_SIZE;
+};
+
+class MfFileReader {
+public:
+    MfFileReader(std::ifstream& mf_stream, std::ofstream& csv_stream, std::ofstream& schema_stream);
+    void Convert();
+private:
+    void ProcessBatches(const Schema& schema);
+    Reader mf_reader;
+    Writer csv_writer;
+    Writer schema_writer;
+    std::vector<size_t> batch_meta_positions;
+    const size_t batch_rows_count = Constants::BATCH_SIZE;
 };
