@@ -46,7 +46,6 @@ SumAggregation::SumAggregation(const std::string col_name, std::string result_na
 
 void SumAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     if (!batch) {
-        // throw std::runtime_error("expected batch");
         return;
     }
     const auto [column_type, column_index] =
@@ -96,7 +95,6 @@ AvgAggregation::AvgAggregation(const std::string col_name, std::string result_na
 
 void AvgAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     if (!batch) {
-        // throw std::runtime_error("expected batch");
         return;
     }
     const auto [column_type, column_index] =
@@ -180,7 +178,6 @@ MaxAggregation::MaxAggregation(const std::string col_name, std::string result_na
 
 void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     if (!batch) {
-        // throw std::runtime_error("expected batch");
         return;
     }
     const auto [column_type, column_index] =
@@ -241,7 +238,6 @@ MinAggregation::MinAggregation(const std::string col_name, std::string result_na
 
 void MinAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     if (!batch) {
-        // throw std::runtime_error("expected batch");
         return;
     }
     const auto [column_type, column_index] =

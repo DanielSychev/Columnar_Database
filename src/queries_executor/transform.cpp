@@ -9,28 +9,6 @@
 #include <string_view>
 
 namespace {
-// int64_t ParseMinute(std::string_view timestamp) {
-//     if (timestamp.size() < 16 || timestamp[13] != ':') {
-//         throw std::runtime_error("wrong timestamp format for ExtractMinuteTransform");
-//     }
-//     const char tens = timestamp[14];
-//     const char ones = timestamp[15];
-//     if (tens < '0' || tens > '5' || ones < '0' || ones > '9') {
-//         throw std::runtime_error("wrong minute format for ExtractMinuteTransform");
-//     }
-//     return static_cast<int64_t>((tens - '0') * 10 + (ones - '0'));
-// }
-
-// std::string TruncateTimestampToMinute(std::string_view timestamp) {
-//     if (timestamp.size() < 16 || timestamp[4] != '-' || timestamp[7] != '-' ||
-//         timestamp[10] != ' ' || timestamp[13] != ':') {
-//         throw std::runtime_error("wrong timestamp format for DateTruncMinuteTransform");
-//     }
-
-//     std::string truncated(timestamp.substr(0, 16));
-//     truncated += ":00";
-//     return truncated;
-// }
 
 size_t ExpectSourceType(
     const Schema& schema,
