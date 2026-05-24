@@ -52,7 +52,7 @@ auto MakeGroupBy(std::shared_ptr<Operator> child_op, std::vector<std::string>&& 
     return std::make_shared<GroupByOperator>(child_op, group_by_columns, aggregations);
 }
 
-auto MakeOrderBy(std::shared_ptr<Operator> child_op, std::vector<std::string>&& column_names, bool descending = false, size_t limit = Constants::ORDER_BY_LIMIT, size_t offset = 0) {
+auto MakeOrderBy(std::shared_ptr<Operator> child_op, std::vector<std::string>&& column_names, bool descending = false, size_t limit = Constants::ORDER_BY_NO_LIMIT, size_t offset = 0) {
     return std::make_shared<OrderByOperator>(child_op, std::move(column_names), descending, limit, offset);
 }
 
