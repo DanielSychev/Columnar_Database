@@ -418,6 +418,8 @@ private:
             return heap;
         }
 
+        const size_t max_heap_size = (limit > SIZE_MAX - offset) ? SIZE_MAX : limit + offset;
+
         auto consume_batch = [&](const std::shared_ptr<Batch>& batch) {
             for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
                 if (batch->HasMask() && batch->banned_rows[row_index]) {
@@ -425,7 +427,7 @@ private:
                 }
                 Row row = batch->GetRow(row_index);
 
-                if (heap.size() < limit + offset) {
+                if (heap.size() < max_heap_size) {
                     heap.push(std::move(row));
                     continue;
                 }
@@ -444,11 +446,19 @@ private:
     }
 
     void BuildSortedRows(RowHeap& heap) {
-        size_t limit = order_by_operator_->limit;
-        while (!heap.empty() && limit > 0) {
-            sorted_rows.push_back(std::move(heap.top()));
+        const size_t limit = order_by_operator_->limit;
+        const size_t offset = order_by_operator_->offset;
+
+        if (heap.size() <= offset) {
+            return;
+        }
+
+        size_t rows_to_take = std::min(limit, heap.size() - offset);
+
+        while (!heap.empty() && rows_to_take > 0) {
+            sorted_rows.push_back(heap.top());
             heap.pop();
-            --limit;
+            --rows_to_take;
         }
         std::reverse(sorted_rows.begin(), sorted_rows.end());
     }
