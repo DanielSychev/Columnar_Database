@@ -23,3 +23,5 @@ src/TestFiles
 *results*
 Dockerfile
 data/
+
+.dockerignore
