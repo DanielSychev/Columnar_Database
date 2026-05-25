@@ -1,6 +1,7 @@
 #include "queries_executor/executor.h"
 #include "engine/data_storage/batch.h"
 #include "engine/data_storage/schema.h"
+#include "queries_executor/aggregation.h"
 #include "queries_executor/helpers.h"
 #include "queries_executor/operator.h"
 #include "queries_executor/transform.h"
@@ -167,20 +168,22 @@ public:
         }
         was_produced = true;
         while (auto batch = child_executor_->NextBatch()) {
+            const size_t n = batch->RowsCount();
+            std::vector<size_t> group_indices(n, 0);
             if (batch->HasMask()) {
-                for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
-                    if (batch->banned_rows[row_index]) continue;
-                    for (auto& aggr: aggregation_operator_->aggs) aggr->RunRow(batch, row_index);
+                for (size_t i = 0; i < n; ++i) {
+                    if (batch->banned_rows[i]) group_indices[i] = SIZE_MAX;
                 }
-            } else {
-                for (auto& aggr: aggregation_operator_->aggs) aggr->RunBatch(batch);
+            }
+            for (auto& aggr: aggregation_operator_->aggs) {
+                aggr->RunBatch(batch, group_indices);
             }
         }
         Schema result_schema;
         std::vector<std::string> result_values;
         for (const auto& aggr: aggregation_operator_->aggs) {
             result_schema.AddColumn(aggr->result_name, aggr->GetResultType());
-            result_values.push_back(aggr->GetResultValue());
+            result_values.push_back(aggr->GetResultValue(0));
         }
         auto result_batch = std::make_shared<Batch>(result_schema, 1);
         result_batch->AddRow(std::move(result_values));
@@ -194,7 +197,7 @@ private:
 
 class GroupByExecutor : public PipelineExecutor {
 public:
-    GroupByExecutor(std::shared_ptr<GroupByOperator> group_by_operator) : group_by_operator_(group_by_operator) {
+    GroupByExecutor(std::shared_ptr<GroupByOperator> group_by_operator) : group_by_operator_(group_by_operator), aggs(group_by_operator->aggs) {
         child_executor_ = CreateChildExecutor(group_by_operator_->child, "GroupByExecutor");
     }
 
@@ -273,7 +276,9 @@ private:
         temp_strings.reserve(group_by_positions.size());
         GroupKeyView view_key;
         view_key.values.reserve(group_by_positions.size());
-        for (size_t row_index = 0; row_index < batch->RowsCount(); ++row_index) {
+        const size_t rows_count = batch->RowsCount();
+        std::vector<size_t> group_indices(rows_count, SIZE_MAX);
+        for (size_t row_index = 0; row_index < rows_count; ++row_index) {
             if (batch->HasMask() && batch->banned_rows[row_index]) {
                 continue;
             }
@@ -307,30 +312,36 @@ private:
                 for (const auto& sv : view_key.values) {
                     owning_key.values.emplace_back(sv);
                 }
-                it = groups_aggs.emplace(std::move(owning_key), std::vector<std::shared_ptr<Aggregation>>{}).first;
-                for (const auto& aggr: group_by_operator_->aggs) {
-                    it->second.push_back(aggr->Clone());
-                }
+                it = groups_aggs.emplace(std::move(owning_key), groups_count++).first;
             }
-
-            for (auto& aggr: it->second) {
-                aggr->RunRow(batch, row_index);
-            }
+            group_indices[row_index] = it->second;
+            // for (auto& aggr: it->second) {
+            //     aggr->RunRow(batch, row_index);
+            // }
+        }
+        for (auto& aggr : aggs) {
+            aggr->RunBatch(batch, group_indices);
         }
     }
 
     std::shared_ptr<Batch> BuildResultBatch() {
         std::shared_ptr<Batch> result_batch;
-        for (auto& [group_key, aggs]: groups_aggs) {
+        for (auto& [group_key, group_ind]: groups_aggs) {
             std::vector<std::string> result_values;
-            for (const auto& value: group_key.values) {
-                result_values.push_back(value);
+            for (auto& value: group_key.values) {
+                result_values.emplace_back(std::move(value));
             }
+            // for (const auto& aggr: aggs) {
+            //     if (result_schema.NumColumns() < group_by_positions.size() + aggs.size()) {
+            //         result_schema.AddColumn(aggr->result_name, aggr->GetResultType());
+            //     }
+            //     result_values.push_back(aggr->GetResultValue());
+            // }
             for (const auto& aggr: aggs) {
                 if (result_schema.NumColumns() < group_by_positions.size() + aggs.size()) {
                     result_schema.AddColumn(aggr->result_name, aggr->GetResultType());
                 }
-                result_values.push_back(aggr->GetResultValue());
+                result_values.emplace_back(aggr->GetResultValue(group_ind));
             }
             if (!result_batch) {
                 result_batch = std::make_shared<Batch>(result_schema, groups_aggs.size());
@@ -343,10 +354,12 @@ private:
     std::shared_ptr<GroupByOperator> group_by_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
     std::vector<bool> group_by_is_string;
-    std::unordered_map<GroupKey, std::vector<std::shared_ptr<Aggregation>>, GroupKeyHash, GroupKeyEqual> groups_aggs;
+    std::unordered_map<GroupKey, size_t, GroupKeyHash, GroupKeyEqual> groups_aggs;
     bool was_produced = false;
     Schema result_schema;
     std::vector<size_t> group_by_positions;
+    size_t groups_count = 0;
+    std::vector<std::shared_ptr<Aggregation>>& aggs;
     // std::unordered_map<GroupKey, std::vector<std::shared_ptr<Aggregation>>, GroupKeyHash> groups_aggs;
 };
 
