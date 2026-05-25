@@ -12,20 +12,34 @@ CountAggregation::CountAggregation(std::string result_name_) : Aggregation("", r
     }
 }
 
-void CountAggregation::RunBatch(std::shared_ptr<Batch> batch) {
+void CountAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
     if (!batch) {
         return;
     }
-    rows_count += batch->RowsCount();
+    size_t max_ind = 0;
+    for (auto& group_index : group_indices) {
+        if (group_index != SIZE_MAX && group_index > max_ind) {
+            max_ind = group_index;
+        }
+    }
+    if (max_ind + 1 > rows_count.size()) {
+        rows_count.resize(max_ind + 1, 0);
+    }
+    for (auto& group_ind : group_indices) {
+        if (group_ind == SIZE_MAX) {
+            continue;
+        }
+        ++rows_count[group_ind];
+    }
 }
 
-void CountAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
-    queries_executor_detail::CheckRow(batch, row_index);
-    ++rows_count;
-}
+// void CountAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
+//     queries_executor_detail::CheckRow(batch, row_index);
+//     ++rows_count;
+// }
 
-std::string CountAggregation::GetResultValue() const {
-    return std::to_string(rows_count);
+std::string CountAggregation::GetResultValue(size_t group_index) const {
+    return std::to_string(rows_count[group_index]);
 }
 
 Type CountAggregation::GetResultType() const {
@@ -44,7 +58,7 @@ SumAggregation::SumAggregation(const std::string col_name, std::string result_na
     }
 }
 
-void SumAggregation::RunBatch(std::shared_ptr<Batch> batch) {
+void SumAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
     if (!batch) {
         return;
     }
@@ -55,24 +69,23 @@ void SumAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     } else if (input_type.value() != column_type) {
         throw std::runtime_error("sum aggregation got different column types across batches");
     }
-    batch->ColumnAt(column_index).Accept(visitor);
+    batch->ColumnAt(column_index).Accept(visitor, group_indices);
 }
 
-void SumAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
-    queries_executor_detail::CheckRow(batch, row_index);
-    if (column_index == -1u) {
-        column_index = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "SumAggregation").second;
-        // считаем, что у всех батчей одинаковая схема, иначе нужно проверять тип колонки на каждом батче -- а это долго
-    }
-    batch->ColumnAt(column_index).Accept(visitor, row_index);
-}
+// void SumAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
+//     queries_executor_detail::CheckRow(batch, row_index);
+//     if (column_index == -1u) {
+//         column_index = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "SumAggregation").second;
+//     }
+//     batch->ColumnAt(column_index).Accept(visitor, row_index);
+// }
 
-std::string SumAggregation::GetResultValue() const {
+std::string SumAggregation::GetResultValue(size_t group_index) const {
     if (input_type.has_value() && input_type.value() == Type::double_) {
-        return std::to_string(visitor.DoubleSum());
+        return std::to_string(visitor.DoubleSum(group_index));
     }
 
-    return column_detail::ToString(visitor.IntegralSum());
+    return column_detail::ToString(visitor.IntegralSum(group_index));
 }
 
 Type SumAggregation::GetResultType() const {
@@ -93,7 +106,7 @@ AvgAggregation::AvgAggregation(const std::string col_name, std::string result_na
     }
 }
 
-void AvgAggregation::RunBatch(std::shared_ptr<Batch> batch) {
+void AvgAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
     if (!batch) {
         return;
     }
@@ -104,19 +117,19 @@ void AvgAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     } else if (input_type.value() != column_type) {
         throw std::runtime_error("avg aggregation got different column types across batches");
     }
-    batch->ColumnAt(column_index).Accept(visitor);
+    batch->ColumnAt(column_index).Accept(visitor, group_indices);
 }
 
-void AvgAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
-    queries_executor_detail::CheckRow(batch, row_index);
-    if (column_index == -1u) {
-        column_index = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "AvgAggregation").second;
-    }
-    batch->ColumnAt(column_index).Accept(visitor, row_index);
-}
+// void AvgAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
+//     queries_executor_detail::CheckRow(batch, row_index);
+//     if (column_index == -1u) {
+//         column_index = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "AvgAggregation").second;
+//     }
+//     batch->ColumnAt(column_index).Accept(visitor, row_index);
+// }
 
-std::string AvgAggregation::GetResultValue() const {
-    return std::to_string(visitor.Avg());
+std::string AvgAggregation::GetResultValue(size_t group_index) const {
+    return std::to_string(visitor.Avg(group_index));
 }
 
 Type AvgAggregation::GetResultType() const {
@@ -135,7 +148,7 @@ CountDistinctAggregation::CountDistinctAggregation(const std::string col_name, s
     }
 }
 
-void CountDistinctAggregation::RunBatch(std::shared_ptr<Batch> batch) {
+void CountDistinctAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
     if (!batch) {
         return;
     }
@@ -145,19 +158,19 @@ void CountDistinctAggregation::RunBatch(std::shared_ptr<Batch> batch) {
         "CountDistinctAggregation"
     );
     (void)column_type;
-    batch->ColumnAt(column_index).Accept(visitor);
+    batch->ColumnAt(column_index).Accept(visitor, group_indices);
 }
 
-void CountDistinctAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
-    queries_executor_detail::CheckRow(batch, row_index);
-    if (column_index == -1u) {
-        column_index = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "CountDistinctAggregation").second;
-    }
-    batch->ColumnAt(column_index).Accept(visitor, row_index);
-}
+// void CountDistinctAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
+//     queries_executor_detail::CheckRow(batch, row_index);
+//     if (column_index == -1u) {
+//         column_index = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "CountDistinctAggregation").second;
+//     }
+//     batch->ColumnAt(column_index).Accept(visitor, row_index);
+// }
 
-std::string CountDistinctAggregation::GetResultValue() const {
-    return std::to_string(visitor.Count());
+std::string CountDistinctAggregation::GetResultValue(size_t group_index) const {
+    return std::to_string(visitor.Count(group_index));
 }
 
 Type CountDistinctAggregation::GetResultType() const {
@@ -176,7 +189,7 @@ MaxAggregation::MaxAggregation(const std::string col_name, std::string result_na
     }
 }
 
-void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch) {
+void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
     if (!batch) {
         return;
     }
@@ -187,35 +200,39 @@ void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     } else if (input_type.value() != column_type) {
         throw std::runtime_error("max aggregation got different column types across batches");
     }
-    if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
-        batch->ColumnAt(column_index).Accept(date_visitor);
+    if (input_type.value() == Type::str) {
+        batch->ColumnAt(column_index).Accept(str_visitor, group_indices);
         return;
     }
-    batch->ColumnAt(column_index).Accept(numeric_visitor);
-}
-
-void MaxAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
-    queries_executor_detail::CheckRow(batch, row_index);
-    if (column_index == -1u) {
-        const auto [type, idx] = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "MaxAggregation");
-        column_index = idx;
-        input_type = type;
-    }
-    if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
-        batch->ColumnAt(column_index).Accept(date_visitor, row_index);
+    if (input_type.value() == Type::date || input_type.value() == Type::timestamp) {
+        batch->ColumnAt(column_index).Accept(date_visitor, group_indices);
         return;
     }
-    batch->ColumnAt(column_index).Accept(numeric_visitor, row_index);
+    batch->ColumnAt(column_index).Accept(numeric_visitor, group_indices);
 }
 
-std::string MaxAggregation::GetResultValue() const {
+// void MaxAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
+//     queries_executor_detail::CheckRow(batch, row_index);
+//     if (column_index == -1u) {
+//         const auto [type, idx] = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "MaxAggregation");
+//         column_index = idx;
+//         input_type = type;
+//     }
+//     if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
+//         batch->ColumnAt(column_index).Accept(date_visitor, row_index);
+//         return;
+//     }
+//     batch->ColumnAt(column_index).Accept(numeric_visitor, row_index);
+// }
+
+std::string MaxAggregation::GetResultValue(size_t group_index) const {
     if (input_type.has_value() && input_type.value() == Type::date)
-        return DateToString(Int32ToDate(date_visitor.MaxDate()));
+        return DateToString(Int32ToDate(date_visitor.MaxDate(group_index)));
     if (input_type.has_value() && input_type.value() == Type::timestamp)
-        return TimeStampToString(Int64ToTimeStamp(date_visitor.MaxTimestamp()));
+        return TimeStampToString(Int64ToTimeStamp(date_visitor.MaxTimestamp(group_index)));
     if (input_type.has_value() && input_type.value() == Type::str)
-        return date_visitor.MaxStr();
-    return std::to_string(numeric_visitor.Max());
+        return str_visitor.MaxStr(group_index);
+    return std::to_string(numeric_visitor.Max(group_index));
 }
 
 Type MaxAggregation::GetResultType() const {
@@ -236,7 +253,7 @@ MinAggregation::MinAggregation(const std::string col_name, std::string result_na
     }
 }
 
-void MinAggregation::RunBatch(std::shared_ptr<Batch> batch) {
+void MinAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
     if (!batch) {
         return;
     }
@@ -247,35 +264,39 @@ void MinAggregation::RunBatch(std::shared_ptr<Batch> batch) {
     } else if (input_type.value() != column_type) {
         throw std::runtime_error("min aggregation got different column types across batches");
     }
-    if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
-        batch->ColumnAt(column_index).Accept(date_visitor);
+    if (input_type.value() == Type::str) {
+        batch->ColumnAt(column_index).Accept(str_visitor, group_indices);
         return;
     }
-    batch->ColumnAt(column_index).Accept(numeric_visitor);
-}
-
-void MinAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
-    queries_executor_detail::CheckRow(batch, row_index);
-    if (column_index == -1u) {
-        const auto [type, idx] = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "MinAggregation");
-        column_index = idx;
-        input_type = type;
-    }
-    if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
-        batch->ColumnAt(column_index).Accept(date_visitor, row_index);
+    if (input_type.value() == Type::date || input_type.value() == Type::timestamp) {
+        batch->ColumnAt(column_index).Accept(date_visitor, group_indices);
         return;
     }
-    batch->ColumnAt(column_index).Accept(numeric_visitor, row_index);
+    batch->ColumnAt(column_index).Accept(numeric_visitor, group_indices);
 }
 
-std::string MinAggregation::GetResultValue() const {
+// void MinAggregation::RunRow(std::shared_ptr<Batch> batch, size_t row_index) {
+//     queries_executor_detail::CheckRow(batch, row_index);
+//     if (column_index == -1u) {
+//         const auto [type, idx] = queries_executor_detail::ResolveColumn(batch->GetSchema(), column_name, "MinAggregation");
+//         column_index = idx;
+//         input_type = type;
+//     }
+//     if (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str) {
+//         batch->ColumnAt(column_index).Accept(date_visitor, row_index);
+//         return;
+//     }
+//     batch->ColumnAt(column_index).Accept(numeric_visitor, row_index);
+// }
+
+std::string MinAggregation::GetResultValue(size_t group_index) const {
     if (input_type.has_value() && input_type.value() == Type::date)
-        return DateToString(Int32ToDate(date_visitor.MinDate()));
+        return DateToString(Int32ToDate(date_visitor.MinDate(group_index)));
     if (input_type.has_value() && input_type.value() == Type::timestamp)
-        return TimeStampToString(Int64ToTimeStamp(date_visitor.MinTimestamp()));
+        return TimeStampToString(Int64ToTimeStamp(date_visitor.MinTimestamp(group_index)));
     if (input_type.has_value() && input_type.value() == Type::str)
-        return date_visitor.MinStr();
-    return std::to_string(numeric_visitor.Min());
+        return str_visitor.MinStr(group_index);
+    return std::to_string(numeric_visitor.Min(group_index));
 }
 
 Type MinAggregation::GetResultType() const {

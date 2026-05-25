@@ -186,8 +186,8 @@ std::string_view StrColumn::GetElemView(size_t index) const {
     return { buf.data() + offsets[index], offsets[index + 1] - offsets[index] };
 }
 
-void StrColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
-    visitor.Visit(*this, ind);
+void StrColumn::Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices) const {
+    visitor.Visit(*this, group_indices);
 }
 
 bool StrColumn::Compare(const std::string& elem, size_t i, CompareSign sign) const {
@@ -266,8 +266,8 @@ std::string DateColumn::GetElemToString(size_t index) const {
     return DateToString(data[index]);
 }
 
-void DateColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
-    visitor.Visit(*this, ind);
+void DateColumn::Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices) const {
+    visitor.Visit(*this, group_indices);
 }
 
 bool DateColumn::Compare(const std::string& elem, size_t i, CompareSign sign) const {
@@ -410,8 +410,8 @@ std::string TimeStampColumn::GetElemToString(size_t index) const {
     return TimeStampToString(data[index]);
 }
 
-void TimeStampColumn::Accept(ColumnVisitor& visitor, size_t ind) const {
-    visitor.Visit(*this, ind);
+void TimeStampColumn::Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices) const {
+    visitor.Visit(*this, group_indices);
 }
 
 bool TimeStampColumn::Compare(const std::string& elem, size_t i, CompareSign sign) const {

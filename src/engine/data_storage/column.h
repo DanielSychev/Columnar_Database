@@ -21,7 +21,7 @@ public:
     virtual void ReadMf(Reader&) = 0;
     virtual void PrintElemCsv(Writer&, size_t, bool) const = 0;
     virtual std::string GetElemToString(size_t index) const = 0;
-    virtual void Accept(ColumnVisitor& visitor, size_t ind = -1u) const = 0;
+    virtual void Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices) const = 0;
     virtual bool Compare(const std::string&, size_t, CompareSign) const = 0;
     virtual std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const = 0;
     virtual std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const = 0;
@@ -230,8 +230,8 @@ public:
         }
     }
 
-    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override {
-        visitor.Visit(*this, ind);
+    void Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices) const override {
+        visitor.Visit(*this, group_indices);
     }
 
     bool Compare(const std::string& elem, size_t index, CompareSign sign) const override {
@@ -319,7 +319,7 @@ public:
     void PrintElemCsv(Writer&, size_t, bool) const override;
     std::string GetElemToString(size_t index) const override;
     std::string_view GetElemView(size_t index) const;
-    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
+    void Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices) const override;
     bool Compare(const std::string&, size_t, CompareSign) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
@@ -343,7 +343,7 @@ public:
     void ReadMf(Reader&) override;
     void PrintElemCsv(Writer&, size_t, bool) const override;
     std::string GetElemToString(size_t index) const override;
-    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
+    void Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices) const override;
     bool Compare(const std::string&, size_t, CompareSign) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
@@ -366,7 +366,7 @@ public:
     void ReadMf(Reader&) override;
     void PrintElemCsv(Writer&, size_t, bool) const override;
     std::string GetElemToString(size_t index) const override;
-    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
+    void Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices) const override;
     bool Compare(const std::string&, size_t, CompareSign) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
