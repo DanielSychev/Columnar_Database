@@ -7,7 +7,7 @@
 #include <type_traits>
 
 namespace Constants {
-    const size_t BATCH_SIZE = 10000;
+    const size_t BATCH_SIZE = 65536;
     const size_t MAX_COLUMN_COUNT = UINT32_MAX;
     const size_t ORDER_BY_NO_LIMIT = SIZE_MAX;
 }
@@ -79,10 +79,17 @@ inline TimeStamp Int64ToTimeStamp(int64_t x) {
 
 namespace concepts {
     template<typename T>
-    concept BinarySerializable = 
-        std::is_integral_v<T> || 
-        std::is_same_v<T, float> || 
+    concept BinarySerializable =
+        std::is_integral_v<T> ||
+        std::is_enum_v<T>     ||
+        std::is_same_v<T, float> ||
         std::is_same_v<T, double> ||
         std::is_same_v<T, Date> ||
         std::is_same_v<T, TimeStamp>;
+};
+
+enum class Tag : uint8_t {
+    RAW = 0,
+    BIT_PACKED = 1,
+    DIC_ENCODED = 2,
 };
