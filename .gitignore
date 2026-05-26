@@ -20,7 +20,7 @@ src/TestFiles/*_output.csv
 
 src/TestFiles
 
-*results*
+experiments/
 Dockerfile
 data/
 
