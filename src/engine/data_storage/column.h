@@ -11,6 +11,7 @@
 #include <vector>
 #include "CsvMfReader/reader.h"
 #include "CsvMfWriter/writer.h"
+#include "engine/data_storage/compression/bit_packing.h"
 #include "engine/data_storage/visitors/visitor.h"
 #include "utils.h"
 
@@ -205,11 +206,11 @@ public:
     }
 
     void PrintMf(Writer& writer) const override {
-        writer.BinaryWriteVector(data);
+        bit_packing::Encode(writer, data);
     }
 
     void ReadMf(Reader& reader) override {
-        reader.BinaryReadVector(data);
+        bit_packing::Decode(reader, data);
     }
 
     void PrintElemCsv(Writer& writer, size_t index, bool is_last) const override {

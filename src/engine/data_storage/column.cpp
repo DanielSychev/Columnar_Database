@@ -1,5 +1,8 @@
 #include "engine/data_storage/column.h"
+#include "engine/data_storage/compression/bit_packing.h"
+#include "engine/data_storage/compression/dictionary_encoding.h"
 #include "utils.h"
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 
@@ -160,14 +163,15 @@ void StrColumn::AddElem(std::string&& s) {
 }
 
 void StrColumn::PrintMf(Writer& w) const {
-    w.BinaryWriteVector(offsets);
-    w.BinaryWriteVector(buf);
+    std::vector<std::string_view> strings(count);
+    for (size_t i = 0; i < count; ++i) {
+        strings[i] = GetElemView(i);
+    }
+    dictionary_encoding::Encode(w, strings);
 }
 
 void StrColumn::ReadMf(Reader& r) {
-    r.BinaryReadVector(offsets);
-    r.BinaryReadVector(buf);
-    count = offsets.size() - 1;
+    dictionary_encoding::Decode(r, buf, offsets, count);
 }
 
 void StrColumn::PrintElemCsv(Writer& w, size_t i, bool b) const {
@@ -245,11 +249,21 @@ DateColumn::DateColumn(const std::vector<std::string>& values) {
 }
 
 void DateColumn::PrintMf(Writer& writer) const {
-    writer.BinaryWriteVector(data);
+    std::vector<int32_t> ints;
+    ints.reserve(data.size());
+    for (const auto& d : data) {
+        ints.push_back(DateToInt32(d));
+    }
+    bit_packing::Encode(writer, ints);
 }
 
 void DateColumn::ReadMf(Reader& reader) {
-    reader.BinaryReadVector(data);
+    std::vector<int32_t> ints;
+    bit_packing::Decode(reader, ints);
+    data.resize(ints.size());
+    for (size_t i = 0; i < ints.size(); ++i) {
+        data[i] = Int32ToDate(ints[i]);
+    }
 }
 
 void DateColumn::PrintElemCsv(Writer& w, size_t i, bool b) const {
@@ -389,11 +403,21 @@ void TimeStampColumn::AddElem(std::string&& s) {
 }
 
 void TimeStampColumn::PrintMf(Writer& writer) const {
-    writer.BinaryWriteVector(data);
+    std::vector<int64_t> ints;
+    ints.reserve(data.size());
+    for (const auto& ts : data) {
+        ints.push_back(TimeStampToInt64(ts));
+    }
+    bit_packing::Encode(writer, ints);
 }
 
 void TimeStampColumn::ReadMf(Reader& reader) {
-    reader.BinaryReadVector(data);
+    std::vector<int64_t> ints;
+    bit_packing::Decode(reader, ints);
+    data.resize(ints.size());
+    for (size_t i = 0; i < ints.size(); ++i) {
+        data[i] = Int64ToTimeStamp(ints[i]);
+    }
 }
 
 void TimeStampColumn::PrintElemCsv(Writer& w, size_t i, bool b) const {
