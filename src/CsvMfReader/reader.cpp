@@ -4,6 +4,10 @@
 Reader::Reader(std::istream& ss, char delimetr) : file_(ss), delimetr_(delimetr) {
 }
 
+bool Reader::ReadNBytes(char* buffer, size_t n) {
+    return static_cast<bool>(file_.read(buffer, n));
+}
+
 bool Reader::ReadLine(std::vector<std::string>& result) {
     result.clear();
     char c;

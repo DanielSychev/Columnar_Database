@@ -9,6 +9,8 @@ class Reader {
 public:
     explicit Reader(std::istream& ss, char delimetr = ',');
 
+    bool ReadNBytes(char* buffer, size_t n);
+
     bool ReadLine(std::vector<std::string>& result);
 
     bool ReadRows(std::vector<std::vector<std::string>>& rows, size_t n); // bool = false обозначает ничего не прочитали
