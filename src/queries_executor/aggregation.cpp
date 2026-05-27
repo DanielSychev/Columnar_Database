@@ -12,7 +12,7 @@ CountAggregation::CountAggregation(std::string result_name_) : Aggregation("", r
     }
 }
 
-void CountAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
+void CountAggregation::RunBatch(std::shared_ptr<Batch> batch, const std::vector<size_t>& group_indices) {
     if (!batch) {
         return;
     }
@@ -42,6 +42,10 @@ std::string CountAggregation::GetResultValue(size_t group_index) const {
     return std::to_string(rows_count[group_index]);
 }
 
+void CountAggregation::GetResultInto(Column& column, size_t group_index) const {
+    static_cast<Int64Column&>(column).AppendRaw(static_cast<int64_t>(rows_count[group_index]));
+}
+
 Type CountAggregation::GetResultType() const {
     return Type::int64;
 }
@@ -58,7 +62,7 @@ SumAggregation::SumAggregation(const std::string col_name, std::string result_na
     }
 }
 
-void SumAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
+void SumAggregation::RunBatch(std::shared_ptr<Batch> batch, const std::vector<size_t>& group_indices) {
     if (!batch) {
         return;
     }
@@ -88,6 +92,14 @@ std::string SumAggregation::GetResultValue(size_t group_index) const {
     return column_detail::ToString(visitor.IntegralSum(group_index));
 }
 
+void SumAggregation::GetResultInto(Column& column, size_t group_index) const {
+    if (input_type.has_value() && input_type.value() == Type::double_) {
+        static_cast<DoubleColumn&>(column).AppendRaw(visitor.DoubleSum(group_index));
+        return;
+    }
+    static_cast<Int128Column&>(column).AppendRaw(visitor.IntegralSum(group_index));
+}
+
 Type SumAggregation::GetResultType() const {
     if (input_type.has_value() && input_type.value() == Type::double_) {
         return Type::double_;
@@ -106,7 +118,7 @@ AvgAggregation::AvgAggregation(const std::string col_name, std::string result_na
     }
 }
 
-void AvgAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
+void AvgAggregation::RunBatch(std::shared_ptr<Batch> batch, const std::vector<size_t>& group_indices) {
     if (!batch) {
         return;
     }
@@ -132,6 +144,10 @@ std::string AvgAggregation::GetResultValue(size_t group_index) const {
     return std::to_string(visitor.Avg(group_index));
 }
 
+void AvgAggregation::GetResultInto(Column& column, size_t group_index) const {
+    static_cast<Int64Column&>(column).AppendRaw(visitor.Avg(group_index));
+}
+
 Type AvgAggregation::GetResultType() const {
     return Type::int64;
 }
@@ -148,7 +164,7 @@ CountDistinctAggregation::CountDistinctAggregation(const std::string col_name, s
     }
 }
 
-void CountDistinctAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
+void CountDistinctAggregation::RunBatch(std::shared_ptr<Batch> batch, const std::vector<size_t>& group_indices) {
     if (!batch) {
         return;
     }
@@ -173,6 +189,10 @@ std::string CountDistinctAggregation::GetResultValue(size_t group_index) const {
     return std::to_string(visitor.Count(group_index));
 }
 
+void CountDistinctAggregation::GetResultInto(Column& column, size_t group_index) const {
+    static_cast<Int64Column&>(column).AppendRaw(static_cast<int64_t>(visitor.Count(group_index)));
+}
+
 Type CountDistinctAggregation::GetResultType() const {
     return Type::int64;
 }
@@ -189,7 +209,7 @@ MaxAggregation::MaxAggregation(const std::string col_name, std::string result_na
     }
 }
 
-void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
+void MaxAggregation::RunBatch(std::shared_ptr<Batch> batch, const std::vector<size_t>& group_indices) {
     if (!batch) {
         return;
     }
@@ -235,6 +255,22 @@ std::string MaxAggregation::GetResultValue(size_t group_index) const {
     return std::to_string(numeric_visitor.Max(group_index));
 }
 
+void MaxAggregation::GetResultInto(Column& column, size_t group_index) const {
+    if (input_type.has_value() && input_type.value() == Type::date) {
+        static_cast<DateColumn&>(column).AppendRaw(Int32ToDate(date_visitor.MaxDate(group_index)));
+        return;
+    }
+    if (input_type.has_value() && input_type.value() == Type::timestamp) {
+        static_cast<TimeStampColumn&>(column).AppendRaw(Int64ToTimeStamp(date_visitor.MaxTimestamp(group_index)));
+        return;
+    }
+    if (input_type.has_value() && input_type.value() == Type::str) {
+        static_cast<StrColumn&>(column).AppendRaw(str_visitor.MaxStr(group_index));
+        return;
+    }
+    static_cast<Int64Column&>(column).AppendRaw(numeric_visitor.Max(group_index));
+}
+
 Type MaxAggregation::GetResultType() const {
     if (input_type.has_value() && (input_type.value() == Type::date || input_type.value() == Type::timestamp || input_type.value() == Type::str)) {
         return input_type.value();
@@ -253,7 +289,7 @@ MinAggregation::MinAggregation(const std::string col_name, std::string result_na
     }
 }
 
-void MinAggregation::RunBatch(std::shared_ptr<Batch> batch, std::vector<size_t> group_indices) {
+void MinAggregation::RunBatch(std::shared_ptr<Batch> batch, const std::vector<size_t>& group_indices) {
     if (!batch) {
         return;
     }
@@ -297,6 +333,22 @@ std::string MinAggregation::GetResultValue(size_t group_index) const {
     if (input_type.has_value() && input_type.value() == Type::str)
         return str_visitor.MinStr(group_index);
     return std::to_string(numeric_visitor.Min(group_index));
+}
+
+void MinAggregation::GetResultInto(Column& column, size_t group_index) const {
+    if (input_type.has_value() && input_type.value() == Type::date) {
+        static_cast<DateColumn&>(column).AppendRaw(Int32ToDate(date_visitor.MinDate(group_index)));
+        return;
+    }
+    if (input_type.has_value() && input_type.value() == Type::timestamp) {
+        static_cast<TimeStampColumn&>(column).AppendRaw(Int64ToTimeStamp(date_visitor.MinTimestamp(group_index)));
+        return;
+    }
+    if (input_type.has_value() && input_type.value() == Type::str) {
+        static_cast<StrColumn&>(column).AppendRaw(str_visitor.MinStr(group_index));
+        return;
+    }
+    static_cast<Int64Column&>(column).AppendRaw(numeric_visitor.Min(group_index));
 }
 
 Type MinAggregation::GetResultType() const {
