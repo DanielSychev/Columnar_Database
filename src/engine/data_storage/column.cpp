@@ -3,6 +3,7 @@
 #include "engine/data_storage/compression/dictionary_encoding.h"
 #include "utils.h"
 #include <cstdint>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 
@@ -156,7 +157,7 @@ StrColumn::StrColumn(const StrColumn& other, const std::vector<bool>& banned) {
     }
 }
 
-void StrColumn::AddElem(std::string&& s) {
+void StrColumn::AppendStr(std::string&& s) {
     buf.insert(buf.end(), s.begin(), s.end());
     offsets.push_back(buf.size());
     ++count;
@@ -229,6 +230,30 @@ size_t StrColumn::Size() const {
     return count;
 }
 
+void StrColumn::BinaryWriteInBuf(std::vector<char>& out, size_t index) const {
+    const std::string_view sv = GetElemView(index);
+    const uint32_t len = static_cast<uint32_t>(sv.size());
+    const char* len_ptr = reinterpret_cast<const char*>(&len);
+    out.insert(out.end(), len_ptr, len_ptr + sizeof(len));
+    out.insert(out.end(), sv.data(), sv.data() + sv.size());
+}
+
+void StrColumn::BinaryReadFromBuf(const char*& ptr) {
+    uint32_t len;
+    std::memcpy(&len, ptr, sizeof(len));
+    ptr += sizeof(len);
+    buf.insert(buf.end(), ptr, ptr + len);
+    offsets.push_back(buf.size());
+    ++count;
+    ptr += len;
+}
+
+void StrColumn::AppendRaw(std::string_view sv) {
+    buf.insert(buf.end(), sv.begin(), sv.end());
+    offsets.push_back(buf.size());
+    ++count;
+}
+
 std::string StrColumn::ValueAt(size_t index) const {
     if (index >= count) {
         throw std::out_of_range("index out of range in ValueAt");
@@ -237,7 +262,7 @@ std::string StrColumn::ValueAt(size_t index) const {
 }
 
 
-void DateColumn::AddElem(std::string&& s) {
+void DateColumn::AppendStr(std::string&& s) {
     data.push_back(StringToDate(s));
 }
 
@@ -305,6 +330,26 @@ std::shared_ptr<Column> DateColumn::CopyReordered(const std::vector<size_t>& ord
 
 size_t DateColumn::Size() const {
     return data.size();
+}
+
+void DateColumn::BinaryWriteInBuf(std::vector<char>& out, size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in BinaryWriteInBuf");
+    }
+    const int32_t v = DateToInt32(data[index]);
+    const char* ptr = reinterpret_cast<const char*>(&v);
+    out.insert(out.end(), ptr, ptr + sizeof(v));
+}
+
+void DateColumn::BinaryReadFromBuf(const char*& ptr) {
+    int32_t v;
+    std::memcpy(&v, ptr, sizeof(v));
+    ptr += sizeof(v);
+    data.push_back(Int32ToDate(v));
+}
+
+void DateColumn::AppendRaw(Date date) {
+    data.push_back(date);
 }
 
 const std::vector<Date>& DateColumn::Data() const {
@@ -398,7 +443,7 @@ TimeStampColumn::TimeStampColumn(const std::vector<std::string>& values) {
     }
 }
 
-void TimeStampColumn::AddElem(std::string&& s) {
+void TimeStampColumn::AppendStr(std::string&& s) {
     data.push_back(StringToTimeStamp(s));
 }
 
@@ -459,6 +504,26 @@ std::shared_ptr<Column> TimeStampColumn::CopyReordered(const std::vector<size_t>
 
 size_t TimeStampColumn::Size() const {
     return data.size();
+}
+
+void TimeStampColumn::BinaryWriteInBuf(std::vector<char>& out, size_t index) const {
+    if (index >= data.size()) {
+        throw std::out_of_range("index out of range in BinaryWriteInBuf");
+    }
+    const int64_t v = TimeStampToInt64(data[index]);
+    const char* ptr = reinterpret_cast<const char*>(&v);
+    out.insert(out.end(), ptr, ptr + sizeof(v));
+}
+
+void TimeStampColumn::BinaryReadFromBuf(const char*& ptr) {
+    int64_t v;
+    std::memcpy(&v, ptr, sizeof(v));
+    ptr += sizeof(v);
+    data.push_back(Int64ToTimeStamp(v));
+}
+
+void TimeStampColumn::AppendRaw(TimeStamp timestamp) {
+    data.push_back(timestamp);
 }
 
 const std::vector<TimeStamp>& TimeStampColumn::Data() const {

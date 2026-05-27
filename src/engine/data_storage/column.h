@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <stdexcept>
@@ -17,7 +18,7 @@
 
 class Column {
 public:
-    virtual void AddElem(std::string&&) = 0; // чтобы move делать
+    virtual void AppendStr(std::string&&) = 0; // чтобы move делать
     virtual void PrintMf(Writer&) const = 0;
     virtual void ReadMf(Reader&) = 0;
     virtual void PrintElemCsv(Writer&, size_t, bool) const = 0;
@@ -27,6 +28,8 @@ public:
     virtual std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const = 0;
     virtual std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const = 0;
     virtual size_t Size() const = 0;
+    virtual void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const = 0;
+    virtual void BinaryReadFromBuf(const char*& ptr) = 0;
     virtual ~Column() = default;
 };
 
@@ -201,7 +204,7 @@ public:
     explicit NumericColumn(const std::vector<std::string>& values)
         : data(column_detail::ParseNumericValues<T>(values)) {}
 
-    void AddElem(std::string&& value) override {
+    void AppendStr(std::string&& value) override {
         data.push_back(column_detail::ParseNumeric<T>(value));
     }
 
@@ -282,6 +285,25 @@ public:
         return data.size();
     }
 
+    void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override {
+        if (index >= data.size()) {
+            throw std::out_of_range("index out of range in BinaryWriteInBuf");
+        }
+        const char* ptr = reinterpret_cast<const char*>(&data[index]);
+        buf.insert(buf.end(), ptr, ptr + sizeof(T));
+    }
+
+    void BinaryReadFromBuf(const char*& ptr) override {
+        T value;
+        std::memcpy(&value, ptr, sizeof(T));
+        ptr += sizeof(T);
+        data.push_back(value);
+    }
+
+    void AppendRaw(T value) {
+        data.push_back(value);
+    }
+
     const std::vector<T>& Data() const {
         return data;
     }
@@ -314,7 +336,7 @@ public:
     explicit StrColumn(const std::vector<std::string>& data_);
     explicit StrColumn(std::vector<std::string>&& data_);
     StrColumn(const StrColumn& other, const std::vector<bool>& banned);
-    void AddElem(std::string&&) override;
+    void AppendStr(std::string&&) override;
     void PrintMf(Writer&) const override;
     void ReadMf(Reader&) override;
     void PrintElemCsv(Writer&, size_t, bool) const override;
@@ -325,6 +347,9 @@ public:
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
+    void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override;
+    void BinaryReadFromBuf(const char*& ptr) override;
+    void AppendRaw(std::string_view sv);
     std::string ValueAt(size_t index) const;
     StrColumn(std::vector<char>&& buf_, std::vector<size_t>&& offsets_, size_t count_);
     ~StrColumn() override = default;
@@ -339,7 +364,7 @@ public:
     DateColumn() = default;
     DateColumn(const std::vector<Date>& data_) : data(data_) {}
     explicit DateColumn(const std::vector<std::string>& values);
-    void AddElem(std::string&&) override;
+    void AppendStr(std::string&&) override;
     void PrintMf(Writer&) const override;
     void ReadMf(Reader&) override;
     void PrintElemCsv(Writer&, size_t, bool) const override;
@@ -349,6 +374,9 @@ public:
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
+    void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override;
+    void BinaryReadFromBuf(const char*& ptr) override;
+    void AppendRaw(Date date);
     const std::vector<Date>& Data() const;
     Date ValueAt(size_t index) const;
     ~DateColumn() override = default;
@@ -362,7 +390,7 @@ public:
     TimeStampColumn(const std::vector<TimeStamp>& data_) : data(data_) {}
     TimeStampColumn(std::vector<TimeStamp>&& data_) : data(std::move(data_)) {}
     explicit TimeStampColumn(const std::vector<std::string>& values);
-    void AddElem(std::string&&) override;
+    void AppendStr(std::string&&) override;
     void PrintMf(Writer&) const override;
     void ReadMf(Reader&) override;
     void PrintElemCsv(Writer&, size_t, bool) const override;
@@ -372,6 +400,9 @@ public:
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
+    void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override;
+    void BinaryReadFromBuf(const char*& ptr) override;
+    void AppendRaw(TimeStamp timestamp);
     const std::vector<TimeStamp>& Data() const;
     TimeStamp ValueAt(size_t index) const;
     ~TimeStampColumn() override = default;
