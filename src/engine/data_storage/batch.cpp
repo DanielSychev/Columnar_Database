@@ -27,7 +27,7 @@ void Batch::AddRow(Row&& row) {
         throw std::runtime_error("batch is full");
     }
     for (size_t i = 0; i < row.size(); ++i) {
-        columns[i]->AddElem(std::move(row[i]));
+        columns[i]->AppendStr(std::move(row[i]));
     }
     ++rows_count;
 }
