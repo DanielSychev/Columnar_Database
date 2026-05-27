@@ -2,7 +2,7 @@ if(APPLE)
     list(APPEND CMAKE_PREFIX_PATH /opt/homebrew)
 endif()
 
-find_package(absl REQUIRED)
+find_package(Boost 1.81 REQUIRED)
 
 find_package(re2 QUIET)
 
