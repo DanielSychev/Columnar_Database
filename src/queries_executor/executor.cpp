@@ -7,13 +7,13 @@
 #include "queries_executor/transform.h"
 #include <algorithm>
 #include <cstddef>
-#include <unordered_map>
 #include <memory>
 #include <numeric>
 #include <queue>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <absl/container/flat_hash_map.h>
 
 namespace {
 std::shared_ptr<PipelineExecutor> CreateChildExecutor(const std::shared_ptr<Operator>& child, std::string_view context) {
@@ -318,7 +318,7 @@ private:
     std::vector<char> keys_buf;
     std::vector<char> temp_key_buf;
     std::vector<size_t> group_indices;
-    std::unordered_map<GroupKey, size_t, GroupKeyHash, GroupKeyEqual> groups_aggs{16, GroupKeyHash{&keys_buf}, GroupKeyEqual{&keys_buf}};
+    absl::flat_hash_map<GroupKey, size_t, GroupKeyHash, GroupKeyEqual> groups_aggs{16, GroupKeyHash{&keys_buf}, GroupKeyEqual{&keys_buf}};
 };
 
 class OrderByExecutor : public PipelineExecutor {

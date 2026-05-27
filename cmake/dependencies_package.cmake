@@ -2,6 +2,8 @@ if(APPLE)
     list(APPEND CMAKE_PREFIX_PATH /opt/homebrew)
 endif()
 
+find_package(absl REQUIRED)
+
 find_package(re2 QUIET)
 
 if(NOT re2_FOUND)
