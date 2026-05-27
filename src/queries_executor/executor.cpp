@@ -207,55 +207,46 @@ public:
         }
         was_produced = true;
 
-        bool column_init = false;
-        while (auto batch = child_executor_->NextBatch()) {
-            if (!column_init) {
-                InitializeGroupByColumns(batch);
-                column_init = true;
-            }
-            RunGroupAggregations(batch);
+        auto batch = child_executor_->NextBatch();
+        if (!batch) {
+            return BuildResultBatch();
         }
+        InitializeGroupByColumns(batch);
+        do {
+            RunGroupAggregations(batch);
+            batch = child_executor_->NextBatch();
+        } while (batch);
         return BuildResultBatch();
     }
 private:
     struct GroupKey {
-        std::vector<std::string> values;
-        // bool operator==(const GroupKey& other) const {
-        //     return values == other.values;
-        // }
-    };
-
-    struct GroupKeyView {
-        std::vector<std::string_view> values;
+        uint32_t offset;
+        uint32_t length;
     };
 
     struct GroupKeyHash {
         using is_transparent = void;
+        const std::vector<char>* buf;
 
-        static size_t CountHash(const auto& values) {
-            size_t seed = 0;
-            for (const auto& s : values) {
-                seed ^= std::hash<std::string_view>{}(s) + 0x9e3779b9 + (seed << 6) + (seed >> 2); // тут мне помогли, ладно
-            }
-            return seed;
+        size_t operator()(std::string_view k) const noexcept {
+            return std::hash<std::string_view>{}(k);
         }
-
-        size_t operator()(const GroupKey& key) const { return CountHash(key.values); }
-        size_t operator()(const GroupKeyView& key) const { return CountHash(key.values); }
+        size_t operator()(GroupKey k) const noexcept {
+            return std::hash<std::string_view>{}({buf->data() + k.offset, k.length});
+        }
     };
 
     struct GroupKeyEqual {
         using is_transparent = void;
+        const std::vector<char>* buf;
 
-        bool operator()(const GroupKey& a, const GroupKey& b) const { return a.values == b.values; }
-        bool operator()(const GroupKeyView& a, const GroupKey& b) const {
-            if (a.values.size() != b.values.size()) return false;
-            for (size_t i = 0; i < a.values.size(); ++i) {
-                if (a.values[i] != b.values[i]) return false;
-            }
-            return true;
+        bool operator()(GroupKey a, GroupKey b) const noexcept {
+            return a.length == b.length && std::memcmp(buf->data() + a.offset, buf->data() + b.offset, a.length) == 0;
         }
-        bool operator()(const GroupKey& a, const GroupKeyView& b) const { return (*this)(b, a); }
+        bool operator()(std::string_view a, GroupKey b) const noexcept {
+            return a.size() == b.length && std::memcmp(a.data(), buf->data() + b.offset, a.size()) == 0;
+        }
+        bool operator()(GroupKey a, std::string_view b) const noexcept { return (*this)(b, a); }
     };
 
     void InitializeGroupByColumns(const std::shared_ptr<Batch>& batch) {
@@ -267,57 +258,29 @@ private:
             );
             result_schema.AddColumn(column_name, type);
             group_by_positions.push_back(column_position);
-            group_by_is_string.push_back(type == Type::str);
         }
     }
 
     void RunGroupAggregations(const std::shared_ptr<Batch>& batch) {
-        std::vector<std::string> temp_strings;
-        temp_strings.reserve(group_by_positions.size());
-        GroupKeyView view_key;
-        view_key.values.reserve(group_by_positions.size());
         const size_t rows_count = batch->RowsCount();
-        std::vector<size_t> group_indices(rows_count, SIZE_MAX);
+        group_indices.assign(rows_count, SIZE_MAX);
         for (size_t row_index = 0; row_index < rows_count; ++row_index) {
             if (batch->HasMask() && batch->banned_rows[row_index]) {
                 continue;
             }
-            temp_strings.clear();
-            view_key.values.clear();
-            
-            for (size_t i = 0; i < group_by_positions.size(); ++i) {
-                if (group_by_is_string[i]) {
-                    const auto& str_col = static_cast<const StrColumn&>(batch->ColumnAt(group_by_positions[i]));
-                    view_key.values.push_back(str_col.GetElemView(row_index));
-                } else {
-                    temp_strings.push_back(batch->ColumnAt(group_by_positions[i]).GetElemToString(row_index));
-                    view_key.values.push_back(temp_strings.back());
-                }
+            temp_key_buf.clear();
+            for (size_t column_position : group_by_positions) {
+                batch->ColumnAt(column_position).BinaryWriteInBuf(temp_key_buf, row_index);
             }
 
-            // GroupKey current_group_key;
-            // for (auto& column_index: group_by_positions) {
-            //     current_group_key.values.push_back(batch->ColumnAt(column_index).GetElemToString(row_index));
-            // }
-            // auto& aggs = groups_aggs[current_group_key];
-            // if (aggs.empty()) {
-            //     for (const auto& aggr: group_by_operator_->aggs) {
-            //         aggs.push_back(aggr->Clone());
-            //     }
-            // }
-            
+            std::string_view view_key{temp_key_buf.data(), temp_key_buf.size()};
             auto it = groups_aggs.find(view_key);
             if (it == groups_aggs.end()) {
-                GroupKey owning_key;
-                for (const auto& sv : view_key.values) {
-                    owning_key.values.emplace_back(sv);
-                }
-                it = groups_aggs.emplace(std::move(owning_key), groups_count++).first;
+                const uint32_t offset = static_cast<uint32_t>(keys_buf.size());
+                keys_buf.insert(keys_buf.end(), view_key.data(), view_key.data() + view_key.size());
+                it = groups_aggs.emplace(GroupKey{offset, static_cast<uint32_t>(view_key.size())}, groups_count++).first;
             }
             group_indices[row_index] = it->second;
-            // for (auto& aggr: it->second) {
-            //     aggr->RunRow(batch, row_index);
-            // }
         }
         for (auto& aggr : aggs) {
             aggr->RunBatch(batch, group_indices);
@@ -325,42 +288,37 @@ private:
     }
 
     std::shared_ptr<Batch> BuildResultBatch() {
-        std::shared_ptr<Batch> result_batch;
-        for (auto& [group_key, group_ind]: groups_aggs) {
-            std::vector<std::string> result_values;
-            for (auto& value: group_key.values) {
-                result_values.emplace_back(std::move(value));
-            }
-            // for (const auto& aggr: aggs) {
-            //     if (result_schema.NumColumns() < group_by_positions.size() + aggs.size()) {
-            //         result_schema.AddColumn(aggr->result_name, aggr->GetResultType());
-            //     }
-            //     result_values.push_back(aggr->GetResultValue());
-            // }
-            for (const auto& aggr: aggs) {
-                if (result_schema.NumColumns() < group_by_positions.size() + aggs.size()) {
-                    result_schema.AddColumn(aggr->result_name, aggr->GetResultType());
-                }
-                result_values.emplace_back(aggr->GetResultValue(group_ind));
-            }
-            if (!result_batch) {
-                result_batch = std::make_shared<Batch>(result_schema, groups_aggs.size());
-            }
-            result_batch->AddRow(std::move(result_values));
+        for (const auto& aggr: aggs) {
+            result_schema.AddColumn(aggr->result_name, aggr->GetResultType());
         }
+        auto result_batch = std::make_shared<Batch>(result_schema, groups_aggs.size());
+        for (auto& [group_key, group_ind]: groups_aggs) {
+            const char* key_ptr = keys_buf.data() + group_key.offset;
+            for (size_t i = 0; i < group_by_positions.size(); ++i) {
+                result_batch->ColumnAt(i).BinaryReadFromBuf(key_ptr);
+            }
+            for (size_t i = 0; i < aggs.size(); ++i) {
+                const auto& aggr = aggs[i];
+                aggr->GetResultInto(result_batch->ColumnAt(group_by_positions.size() + i), group_ind);
+            }
+        }
+        result_batch->SetRowsCount(groups_aggs.size());
         return result_batch;
     }
 
     std::shared_ptr<GroupByOperator> group_by_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
-    std::vector<bool> group_by_is_string;
-    std::unordered_map<GroupKey, size_t, GroupKeyHash, GroupKeyEqual> groups_aggs;
     bool was_produced = false;
     Schema result_schema;
     std::vector<size_t> group_by_positions;
     size_t groups_count = 0;
     std::vector<std::shared_ptr<Aggregation>>& aggs;
-    // std::unordered_map<GroupKey, std::vector<std::shared_ptr<Aggregation>>, GroupKeyHash> groups_aggs;
+
+
+    std::vector<char> keys_buf;
+    std::vector<char> temp_key_buf;
+    std::vector<size_t> group_indices;
+    std::unordered_map<GroupKey, size_t, GroupKeyHash, GroupKeyEqual> groups_aggs{16, GroupKeyHash{&keys_buf}, GroupKeyEqual{&keys_buf}};
 };
 
 class OrderByExecutor : public PipelineExecutor {
