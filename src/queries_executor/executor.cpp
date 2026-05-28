@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <memory>
-#include <numeric>
 #include <queue>
 #include <stdexcept>
 #include <string>
@@ -116,14 +115,7 @@ private:
                 "FilterExecutor"
             );
             (void)column_type;
-            for (size_t j = 0; j < batch->RowsCount(); ++j) {
-                if (banned[j]) {
-                    continue;
-                }
-                if (!batch->ColumnAt(column_index).Compare(filter_operator_->values[i], j, filter_operator_->signs[i])) {
-                    banned[j] = true;
-                }
-            }
+            batch->ColumnAt(column_index).Filter(filter_operator_->values[i], filter_operator_->signs[i], banned);
         }
     }
 
@@ -345,17 +337,17 @@ public:
     }
 
 private:
-    bool ComesBefore(const Row& left, const Row& right) const {
-        for (auto& i : column_indices) {
-            const auto cmp = queries_executor_detail::CompareTypedValues(
-                schema.ColumnTypeAt(i),
-                left[i],
-                right[i],
-                "OrderByExecutor"
-            );
-            if (cmp != 0) {
-                return descending ? cmp > 0 : cmp < 0;
-            }
+
+    struct RowRef {
+        std::shared_ptr<Batch> batch;
+        uint32_t row_idx;
+    };
+
+    bool ComesBefore(const RowRef& left, const RowRef& right) const {
+        for (size_t col : column_indices) {
+            int cmp = left.batch->ColumnAt(col).CompareAt(
+                left.row_idx, right.batch->ColumnAt(col), right.row_idx);
+            if (cmp != 0) return descending ? cmp > 0 : cmp < 0;
         }
         return false;
     }
@@ -363,12 +355,12 @@ private:
     struct RowComparator {
         const OrderByExecutor* executor;
 
-        bool operator()(const Row& left, const Row& right) const {
+        bool operator()(const RowRef& left, const RowRef& right) const {
             return executor->ComesBefore(left, right);
         }
     };
 
-    using RowHeap = std::priority_queue<Row, std::vector<Row>, RowComparator>;
+    using RowHeap = std::priority_queue<RowRef, std::vector<RowRef>, RowComparator>;
 
     void FindOrderColumns(const std::shared_ptr<Batch>& batch) {
         descending = order_by_operator_->descending;
@@ -396,7 +388,7 @@ private:
                 if (batch->HasMask() && batch->banned_rows[row_index]) {
                     continue;
                 }
-                Row row = batch->GetRow(row_index);
+                RowRef row{batch, static_cast<uint32_t>(row_index)};
 
                 if (heap.size() < max_heap_size) {
                     heap.push(std::move(row));
@@ -437,15 +429,18 @@ private:
     std::shared_ptr<Batch> BuildResultBatch() {
         auto result_batch = std::make_shared<Batch>(schema, sorted_rows.size());
         for (auto& row: sorted_rows) {
-            result_batch->AddRow(std::move(row));
+            for (size_t c = 0; c < schema.NumColumns(); ++c) {
+                result_batch->ColumnAt(c).AppendFrom(row.batch->ColumnAt(c), row.row_idx);
+            }
         }
+        result_batch->SetRowsCount(sorted_rows.size());
         return result_batch;
     }
 
     std::shared_ptr<OrderByOperator> order_by_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;
     std::vector<size_t> column_indices;
-    std::vector<Row> sorted_rows;
+    std::vector<RowRef> sorted_rows;
     bool descending;
     Schema schema;
     bool was_produced = false;
@@ -463,16 +458,20 @@ public:
         if (limit_operator_->limit == 0 || !batch) {
             return nullptr;
         }
-        
+
         size_t rows_num = std::min(limit_operator_->limit, batch->RowsCount());
         limit_operator_->limit -= rows_num;
-        auto limit_batch = std::make_shared<Batch>(batch->GetSchema(), rows_num);
-        std::vector<size_t> order(rows_num);
-        std::iota(order.begin(), order.end(), 0);
-        for (size_t i = 0; i < batch->ColumnsCount(); ++i) {
-            limit_batch->AddColumn(i, batch->ColumnAt(i).CopyReordered(order));
+        if (rows_num == batch->RowsCount()) {
+            return batch;
         }
-        return limit_batch;
+        std::vector<bool>& banned = batch->banned_rows;
+        if (banned.empty()) {
+            banned.assign(batch->RowsCount(), false);
+        }
+        for (size_t i = rows_num; i < batch->RowsCount(); ++i) {
+            banned[i] = true;
+        }
+        return batch;
     }
 private:
     std::shared_ptr<LimitOperator> limit_operator_;
