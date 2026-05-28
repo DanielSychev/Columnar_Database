@@ -209,6 +209,33 @@ bool StrColumn::Compare(const std::string& elem, size_t i, CompareSign sign) con
     return column_detail::BasicCompare(sv, std::string_view(elem), sign);
 }
 
+void StrColumn::Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const {
+    if (sign == CompareSign::IN) {
+        throw std::runtime_error("IN sign is not supported for StrColumn");
+    }
+    const std::string_view pattern(value);
+    if (sign == CompareSign::LIKE) {
+        for (size_t i = 0; i < count; ++i) {
+            if (banned[i]) continue;
+            if (!LikeCompare(GetElemView(i), pattern)) banned[i] = true;
+        }
+        return;
+    }
+    if (sign == CompareSign::NOT_LIKE) {
+        for (size_t i = 0; i < count; ++i) {
+            if (banned[i]) continue;
+            if (LikeCompare(GetElemView(i), pattern)) banned[i] = true;
+        }
+        return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        if (banned[i]) continue;
+        if (!column_detail::BasicCompare(GetElemView(i), pattern, sign)) {
+            banned[i] = true;
+        }
+    }
+}
+
 std::shared_ptr<Column> StrColumn::CopyFiltered(const std::vector<bool>& banned) const {
     return std::make_shared<StrColumn>(*this, banned);
 }
@@ -261,6 +288,16 @@ std::string StrColumn::ValueAt(size_t index) const {
     return std::string(GetElemView(index));
 }
 
+int StrColumn::CompareAt(size_t index, const Column& other, size_t other_index) const {
+    const auto& o = static_cast<const StrColumn&>(other);
+    const int raw = GetElemView(index).compare(o.GetElemView(other_index));
+    return (raw > 0) - (raw < 0);
+}
+
+void StrColumn::AppendFrom(const Column& other, size_t index) {
+    const auto& o = static_cast<const StrColumn&>(other);
+    AppendRaw(o.GetElemView(index));
+}
 
 void DateColumn::AppendStr(std::string&& s) {
     data.push_back(StringToDate(s));
@@ -320,6 +357,22 @@ bool DateColumn::Compare(const std::string& elem, size_t i, CompareSign sign) co
     return column_detail::BasicCompare(DateToInt32(data[i]), DateToInt32(d2), sign);
 }
 
+void DateColumn::Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const {
+    if (sign == CompareSign::IN) {
+        throw std::invalid_argument("IN sign is not supported for DateColumn");
+    }
+    if (sign == CompareSign::LIKE || sign == CompareSign::NOT_LIKE) {
+        throw std::invalid_argument("LIKE and NOT_LIKE are supported only for string columns");
+    }
+    const int32_t parsed = DateToInt32(StringToDate(value));
+    for (size_t i = 0; i < data.size(); ++i) {
+        if (banned[i]) continue;
+        if (!column_detail::BasicCompare(DateToInt32(data[i]), parsed, sign)) {
+            banned[i] = true;
+        }
+    }
+}
+
 std::shared_ptr<Column> DateColumn::CopyFiltered(const std::vector<bool>& banned) const {
     return std::make_shared<DateColumn>(column_detail::CopyAllowedValues(data, banned));
 }
@@ -363,8 +416,17 @@ Date DateColumn::ValueAt(size_t index) const {
     return data[index];
 }
 
+int DateColumn::CompareAt(size_t index, const Column& other, size_t other_index) const {
+    const auto& o = static_cast<const DateColumn&>(other);
+    int32_t d1 = DateToInt32(data[index]);
+    int32_t d2 = DateToInt32(o.data[other_index]);
+    return (d1 > d2) - (d1 < d2);
+}
 
-
+void DateColumn::AppendFrom(const Column& other, size_t index) {
+    const auto& o = static_cast<const DateColumn&>(other);
+    AppendRaw(o.ValueAt(index));
+}
 
 
 
@@ -494,6 +556,22 @@ bool TimeStampColumn::Compare(const std::string& elem, size_t i, CompareSign sig
     return column_detail::BasicCompare(TimeStampToInt64(data[i]), TimeStampToInt64(ts2), sign);
 }
 
+void TimeStampColumn::Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const {
+    if (sign == CompareSign::IN) {
+        throw std::invalid_argument("IN sign is not supported for TimeStampColumn");
+    }
+    if (sign == CompareSign::LIKE || sign == CompareSign::NOT_LIKE) {
+        throw std::invalid_argument("LIKE and NOT_LIKE are supported only for string columns");
+    }
+    const int64_t parsed = TimeStampToInt64(StringToTimeStamp(value));
+    for (size_t i = 0; i < data.size(); ++i) {
+        if (banned[i]) continue;
+        if (!column_detail::BasicCompare(TimeStampToInt64(data[i]), parsed, sign)) {
+            banned[i] = true;
+        }
+    }
+}
+
 std::shared_ptr<Column> TimeStampColumn::CopyFiltered(const std::vector<bool>& banned) const {
     return std::make_shared<TimeStampColumn>(column_detail::CopyAllowedValues(data, banned));
 }
@@ -537,3 +615,15 @@ TimeStamp TimeStampColumn::ValueAt(size_t index) const {
     return data[index];
 }
 
+
+int TimeStampColumn::CompareAt(size_t index, const Column& other, size_t other_index) const {
+    const auto& o = static_cast<const TimeStampColumn&>(other);
+    int64_t t1 = TimeStampToInt64(data[index]);
+    int64_t t2 = TimeStampToInt64(o.data[other_index]);
+    return (t1 > t2) - (t1 < t2);
+}
+
+void TimeStampColumn::AppendFrom(const Column& other, size_t index) {
+    const auto& o = static_cast<const TimeStampColumn&>(other);
+    AppendRaw(o.ValueAt(index));
+}
