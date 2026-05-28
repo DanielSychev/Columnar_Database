@@ -25,3 +25,5 @@ Dockerfile
 data/
 
 .dockerignore
+
+*.md
