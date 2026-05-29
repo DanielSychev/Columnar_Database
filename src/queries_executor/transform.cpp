@@ -241,19 +241,19 @@ SubTransform::SubTransform(const std::string& source_column_name_, int64_t value
 }
 
 
-ConstantTransform::ConstantTransform(const std::string& value_, const std::string& result_name_) : Transform(result_name_), value(value_) {
+ConstantInt8Transform::ConstantInt8Transform(const int8_t& value_, const std::string& result_name_) : Transform(result_name_), value(value_) {
     if (result_name_.empty()) {
-        result_name = value_;
+        result_name = std::to_string(value_);
     }
 }
 
-Type ConstantTransform::ResultType(const Schema&) const {
-    return Type::str;
+Type ConstantInt8Transform::ResultType(const Schema&) const {
+    return Type::int8;
 }
 
-std::shared_ptr<Column> ConstantTransform::Apply(const Batch& batch) const {
-    std::vector<std::string> values(batch.RowsCount(), value);
-    return std::make_shared<StrColumn>(std::move(values));
+std::shared_ptr<Column> ConstantInt8Transform::Apply(const Batch& batch) const {
+    std::vector<int8_t> values(batch.RowsCount(), value);
+    return std::make_shared<Int8Column>(std::move(values));
 }
 
 

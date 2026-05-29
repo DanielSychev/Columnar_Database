@@ -82,14 +82,14 @@ struct SubTransform : public AddTransform {
     SubTransform(const std::string& source_column_name_, int64_t value_, const std::string& result_name_ = "");
 };
 
-struct ConstantTransform : public Transform {
-    ConstantTransform(const std::string& value_, const std::string& result_name_ = "");
+struct ConstantInt8Transform : public Transform {
+    ConstantInt8Transform(const int8_t& value_, const std::string& result_name_ = "");
 
     Type ResultType(const Schema&) const override;
     std::shared_ptr<Column> Apply(const Batch& batch) const override;
 
 private:
-    std::string value;
+    int8_t value;
 };
 
 struct RenameTransform : public Transform {

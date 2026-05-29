@@ -390,7 +390,7 @@ std::shared_ptr<Operator> MakeQuery33() {
 // SELECT 1, URL, COUNT(*) AS c FROM hits GROUP BY 1, URL ORDER BY c DESC LIMIT 10;
 std::shared_ptr<Operator> MakeQuery34() {
     auto scan = MakeScan({"URL"});
-    auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<ConstantTransform>("1", "1")};
+    auto transforms = std::vector<std::shared_ptr<Transform>>{std::make_shared<ConstantInt8Transform>(1, "1")};
     auto transform = std::make_shared<TransformsOperator>(scan, std::move(transforms));
     auto aggregations = std::vector<std::shared_ptr<Aggregation>>{std::make_shared<CountAggregation>("c")};
     auto group_by = MakeGroupBy(transform, {"1", "URL"}, aggregations);
