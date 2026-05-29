@@ -13,7 +13,7 @@ CountAggregation::CountAggregation(std::string result_name_) : Aggregation("", s
     }
 }
 
-void CountAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<size_t>& group_indices, size_t max_group_index) {
+void CountAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<uint32_t>& group_indices, size_t max_group_index) {
     if (!batch) {
         return;
     }
@@ -21,7 +21,7 @@ void CountAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::
         rows_count.resize(max_group_index + 1, 0);
     }
     for (auto& group_ind : group_indices) {
-        if (group_ind == SIZE_MAX) {
+        if (group_ind == UINT32_MAX) {
             continue;
         }
         ++rows_count[group_ind];
@@ -52,7 +52,7 @@ SumAggregation::SumAggregation(std::string col_name, std::string result_name_)
     }
 }
 
-void SumAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<size_t>& group_indices, size_t max_group_index) {
+void SumAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<uint32_t>& group_indices, size_t max_group_index) {
     if (!batch) {
         return;
     }
@@ -100,7 +100,7 @@ AvgAggregation::AvgAggregation(std::string col_name, std::string result_name_)
     }
 }
 
-void AvgAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<size_t>& group_indices, size_t max_group_index) {
+void AvgAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<uint32_t>& group_indices, size_t max_group_index) {
     if (!batch) {
         return;
     }
@@ -138,7 +138,7 @@ CountDistinctAggregation::CountDistinctAggregation(std::string col_name, std::st
     }
 }
 
-void CountDistinctAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<size_t>& group_indices, size_t max_group_index) {
+void CountDistinctAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<uint32_t>& group_indices, size_t max_group_index) {
     if (!batch) {
         return;
     }
@@ -177,7 +177,7 @@ MaxAggregation::MaxAggregation(std::string col_name, std::string result_name_)
     }
 }
 
-void MaxAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<size_t>& group_indices, size_t max_group_index) {
+void MaxAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<uint32_t>& group_indices, size_t max_group_index) {
     if (!batch) {
         return;
     }
@@ -243,7 +243,7 @@ MinAggregation::MinAggregation(std::string col_name, std::string result_name_)
     }
 }
 
-void MinAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<size_t>& group_indices, size_t max_group_index) {
+void MinAggregation::RunBatch(const std::shared_ptr<Batch>& batch, const std::vector<uint32_t>& group_indices, size_t max_group_index) {
     if (!batch) {
         return;
     }

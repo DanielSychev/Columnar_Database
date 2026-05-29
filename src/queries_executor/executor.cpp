@@ -161,10 +161,10 @@ public:
         was_produced = true;
         while (auto batch = child_executor_->NextBatch()) {
             const size_t n = batch->RowsCount();
-            std::vector<size_t> group_indices(n, 0);
+            std::vector<uint32_t> group_indices(n, 0);
             if (batch->HasMask()) {
                 for (size_t i = 0; i < n; ++i) {
-                    if (batch->banned_rows[i]) group_indices[i] = SIZE_MAX;
+                    if (batch->banned_rows[i]) group_indices[i] = UINT32_MAX;
                 }
             }
             for (auto& aggr: aggregation_operator_->aggs) {
@@ -255,7 +255,7 @@ private:
 
     void RunGroupAggregations(const std::shared_ptr<Batch>& batch) {
         const size_t rows_count = batch->RowsCount();
-        group_indices.assign(rows_count, SIZE_MAX);
+        group_indices.assign(rows_count, UINT32_MAX);
         for (size_t row_index = 0; row_index < rows_count; ++row_index) {
             if (batch->HasMask() && batch->banned_rows[row_index]) {
                 continue;
@@ -303,14 +303,14 @@ private:
     bool was_produced = false;
     Schema result_schema;
     std::vector<size_t> group_by_positions;
-    size_t groups_count = 0;
+    uint32_t groups_count = 0;
     std::vector<std::shared_ptr<Aggregation>>& aggs;
 
 
     std::vector<char> keys_buf;
     std::vector<char> temp_key_buf;
-    std::vector<size_t> group_indices;
-    boost::unordered_flat_map<GroupKey, size_t, GroupKeyHash, GroupKeyEqual> groups_aggs{16, GroupKeyHash{&keys_buf}, GroupKeyEqual{&keys_buf}};
+    std::vector<uint32_t> group_indices;
+    boost::unordered_flat_map<GroupKey, uint32_t, GroupKeyHash, GroupKeyEqual> groups_aggs{16, GroupKeyHash{&keys_buf}, GroupKeyEqual{&keys_buf}};
 };
 
 class OrderByExecutor : public PipelineExecutor {

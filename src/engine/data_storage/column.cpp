@@ -191,7 +191,7 @@ std::string_view StrColumn::GetElemView(size_t index) const {
     return { buf.data() + offsets[index], offsets[index + 1] - offsets[index] };
 }
 
-void StrColumn::Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices, size_t max_group_index) const {
+void StrColumn::Accept(ColumnVisitor& visitor, const std::vector<uint32_t>& group_indices, size_t max_group_index) const {
     visitor.Visit(*this, group_indices, max_group_index);
 }
 
@@ -342,7 +342,7 @@ std::string DateColumn::GetElemToString(size_t index) const {
     return DateToString(data[index]);
 }
 
-void DateColumn::Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices, size_t max_group_index) const {
+void DateColumn::Accept(ColumnVisitor& visitor, const std::vector<uint32_t>& group_indices, size_t max_group_index) const {
     visitor.Visit(*this, group_indices, max_group_index);
 }
 
@@ -541,7 +541,7 @@ std::string TimeStampColumn::GetElemToString(size_t index) const {
     return TimeStampToString(data[index]);
 }
 
-void TimeStampColumn::Accept(ColumnVisitor& visitor, const std::vector<size_t>& group_indices, size_t max_group_index) const {
+void TimeStampColumn::Accept(ColumnVisitor& visitor, const std::vector<uint32_t>& group_indices, size_t max_group_index) const {
     visitor.Visit(*this, group_indices, max_group_index);
 }
 
