@@ -7,7 +7,7 @@
 #include <type_traits>
 
 namespace Constants {
-    const size_t BATCH_SIZE = 2<<14; // 16K rows
+    const size_t BATCH_SIZE = 1<<15; // 32K rows
     const size_t MAX_COLUMN_COUNT = UINT32_MAX;
     const size_t ORDER_BY_NO_LIMIT = SIZE_MAX;
 }
