@@ -21,6 +21,7 @@ public:
     void AppendColumn(const std::string& name, Type type, std::shared_ptr<Column> column);
     Column& ColumnAt(size_t column_index);
     const Column& ColumnAt(size_t column_index) const;
+    const std::shared_ptr<Column>& ColumnSharedAt(size_t column_index) const;
     const Schema& GetSchema() const;
     bool HasSchema() const;
     void SetRowsCount(size_t row_count);

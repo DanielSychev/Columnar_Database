@@ -204,6 +204,7 @@ class NumericColumn : public Column {
 public:
     NumericColumn() = default;
     NumericColumn(const std::vector<T>& data_) : data(data_) {}
+    NumericColumn(std::vector<T>&& data_) : data(std::move(data_)) {}
     explicit NumericColumn(const std::vector<std::string>& values)
         : data(column_detail::ParseNumericValues<T>(values)) {}
 
@@ -416,6 +417,7 @@ class DateColumn : public Column {
 public:
     DateColumn() = default;
     DateColumn(const std::vector<Date>& data_) : data(data_) {}
+    DateColumn(std::vector<Date>&& data_) : data(std::move(data_)) {}
     explicit DateColumn(const std::vector<std::string>& values);
     void AppendStr(std::string&&) override;
     void PrintMf(Writer&) const override;

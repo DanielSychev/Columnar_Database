@@ -100,6 +100,13 @@ const Column& Batch::ColumnAt(size_t column_index) const {
     return *columns[column_index];
 }
 
+const std::shared_ptr<Column>& Batch::ColumnSharedAt(size_t column_index) const {
+    if (column_index >= columns.size()) {
+        throw std::runtime_error("wrong column index");
+    }
+    return columns[column_index];
+}
+
 const Schema& Batch::GetSchema() const {
     if (!has_schema) {
         throw std::runtime_error("batch has no schema");

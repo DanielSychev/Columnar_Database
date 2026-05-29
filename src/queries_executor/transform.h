@@ -3,6 +3,7 @@
 #include "engine/data_storage/batch.h"
 #include "engine/data_storage/column.h"
 #include "engine/data_storage/schema.h"
+#include <cstdint>
 #include <memory>
 #include <re2/re2.h>
 #include <string>
@@ -19,6 +20,7 @@ struct Transform {
     const std::string& GetResultName() const;
 protected:
     std::string result_name;
+    mutable size_t column_index_mem = SIZE_MAX;
 };
 
 struct ExtractMinuteTransform : public Transform {
@@ -72,6 +74,7 @@ struct AddTransform : public Transform {
 private:
     std::string source_column_name;
     int64_t value;
+    mutable Type input_type_mem = Type::int64;
     std::set<Type> allowed_types{Type::int64, Type::int32, Type::int16, Type::int8};
 };
 
@@ -100,15 +103,23 @@ private:
 };
 
 struct CaseWhenTransform: public Transform {
-    CaseWhenTransform(const std::vector<std::string>& condition_column_names_, const std::vector<std::string>& condition_values_, const std::vector<CompareSign>& condition_signs_, 
+    CaseWhenTransform(const std::vector<std::string>& condition_column_names_, const std::vector<std::string>& condition_values_, const std::vector<CompareSign>& condition_signs_,
         const std::string& column_true_, const std::string& column_false_, const std::string& result_name_ = "");
 
         Type ResultType(const Schema& input_schema) const override;
         std::shared_ptr<Column> Apply(const Batch& batch) const override;
 private:
+    void Resolve(const Schema& schema) const;
+
     std::vector<std::string> condition_column_names;
     std::vector<std::string> condition_values;
     std::vector<CompareSign> condition_signs;
     std::string column_true;
     std::string column_false;
+
+    mutable std::vector<size_t> condition_column_indices;
+    mutable size_t column_true_index = SIZE_MAX;
+    mutable size_t column_false_index = SIZE_MAX;
+    mutable Type result_type_cache = Type::str;
+    mutable bool resolved = false;
 };
