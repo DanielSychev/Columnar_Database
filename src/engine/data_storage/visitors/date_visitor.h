@@ -10,22 +10,18 @@
 #include "engine/data_storage/visitors/visitor.h"
 
 struct StrMaxVisitor : public ColumnVisitor {
-    void Visit(const Int8Column&,        const std::vector<size_t>&) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
-    void Visit(const Int16Column&,       const std::vector<size_t>&) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
-    void Visit(const Int32Column&,       const std::vector<size_t>&) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
-    void Visit(const Int64Column&,       const std::vector<size_t>&) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
-    void Visit(const Int128Column&,      const std::vector<size_t>&) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
-    void Visit(const DoubleColumn&,      const std::vector<size_t>&) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
-    void Visit(const DateColumn&,        const std::vector<size_t>&) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
-    void Visit(const TimeStampColumn&,   const std::vector<size_t>&) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
+    void Visit(const Int8Column&,        const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
+    void Visit(const Int16Column&,       const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
+    void Visit(const Int32Column&,       const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
+    void Visit(const Int64Column&,       const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
+    void Visit(const Int128Column&,      const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
+    void Visit(const DoubleColumn&,      const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
+    void Visit(const DateColumn&,        const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
+    void Visit(const TimeStampColumn&,   const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMaxVisitor: non-str column"); }
 
-    void Visit(const StrColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const StrColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const size_t n = std::min(col.Size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_max_str, max_ind);
+        visitor_detail::EnsureCapacity(group_max_str, max_group_index);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -46,22 +42,18 @@ private:
 
 
 struct StrMinVisitor : public ColumnVisitor {
-    void Visit(const Int8Column&,        const std::vector<size_t>&) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
-    void Visit(const Int16Column&,       const std::vector<size_t>&) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
-    void Visit(const Int32Column&,       const std::vector<size_t>&) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
-    void Visit(const Int64Column&,       const std::vector<size_t>&) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
-    void Visit(const Int128Column&,      const std::vector<size_t>&) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
-    void Visit(const DoubleColumn&,      const std::vector<size_t>&) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
-    void Visit(const DateColumn&,        const std::vector<size_t>&) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
-    void Visit(const TimeStampColumn&,   const std::vector<size_t>&) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
+    void Visit(const Int8Column&,        const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
+    void Visit(const Int16Column&,       const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
+    void Visit(const Int32Column&,       const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
+    void Visit(const Int64Column&,       const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
+    void Visit(const Int128Column&,      const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
+    void Visit(const DoubleColumn&,      const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
+    void Visit(const DateColumn&,        const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
+    void Visit(const TimeStampColumn&,   const std::vector<size_t>&, size_t) override { throw std::runtime_error("StrMinVisitor: non-str column"); }
 
-    void Visit(const StrColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const StrColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const size_t n = std::min(col.Size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_min_str, max_ind);
+        visitor_detail::EnsureCapacity(group_min_str, max_group_index);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -82,22 +74,18 @@ private:
 
 
 struct DateMaxVisitor : public ColumnVisitor {
-    void Visit(const Int8Column&,    const std::vector<size_t>&) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
-    void Visit(const Int16Column&,   const std::vector<size_t>&) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
-    void Visit(const Int32Column&,   const std::vector<size_t>&) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
-    void Visit(const Int64Column&,   const std::vector<size_t>&) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
-    void Visit(const Int128Column&,  const std::vector<size_t>&) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
-    void Visit(const DoubleColumn&,  const std::vector<size_t>&) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
-    void Visit(const StrColumn&,     const std::vector<size_t>&) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
+    void Visit(const Int8Column&,    const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
+    void Visit(const Int16Column&,   const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
+    void Visit(const Int32Column&,   const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
+    void Visit(const Int64Column&,   const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
+    void Visit(const Int128Column&,  const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
+    void Visit(const DoubleColumn&,  const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
+    void Visit(const StrColumn&,     const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMaxVisitor: non-date column"); }
 
-    void Visit(const DateColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const DateColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const auto& data = col.Data();
         const size_t n = std::min(data.size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_max_date, max_ind, INT32_MIN);
+        visitor_detail::EnsureCapacity(group_max_date, max_group_index, INT32_MIN);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -106,14 +94,10 @@ struct DateMaxVisitor : public ColumnVisitor {
         }
     }
 
-    void Visit(const TimeStampColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const TimeStampColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const auto& data = col.Data();
         const size_t n = std::min(data.size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_max_timestamp, max_ind, INT64_MIN);
+        visitor_detail::EnsureCapacity(group_max_timestamp, max_group_index, INT64_MIN);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -138,22 +122,18 @@ private:
 
 
 struct DateMinVisitor : public ColumnVisitor {
-    void Visit(const Int8Column&,    const std::vector<size_t>&) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
-    void Visit(const Int16Column&,   const std::vector<size_t>&) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
-    void Visit(const Int32Column&,   const std::vector<size_t>&) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
-    void Visit(const Int64Column&,   const std::vector<size_t>&) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
-    void Visit(const Int128Column&,  const std::vector<size_t>&) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
-    void Visit(const DoubleColumn&,  const std::vector<size_t>&) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
-    void Visit(const StrColumn&,     const std::vector<size_t>&) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
+    void Visit(const Int8Column&,    const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
+    void Visit(const Int16Column&,   const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
+    void Visit(const Int32Column&,   const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
+    void Visit(const Int64Column&,   const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
+    void Visit(const Int128Column&,  const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
+    void Visit(const DoubleColumn&,  const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
+    void Visit(const StrColumn&,     const std::vector<size_t>&, size_t) override { throw std::runtime_error("DateMinVisitor: non-date column"); }
 
-    void Visit(const DateColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const DateColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const auto& data = col.Data();
         const size_t n = std::min(data.size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_min_date, max_ind, INT32_MAX);
+        visitor_detail::EnsureCapacity(group_min_date, max_group_index, INT32_MAX);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -162,14 +142,10 @@ struct DateMinVisitor : public ColumnVisitor {
         }
     }
 
-    void Visit(const TimeStampColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const TimeStampColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const auto& data = col.Data();
         const size_t n = std::min(data.size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_min_timestamp, max_ind, INT64_MAX);
+        visitor_detail::EnsureCapacity(group_min_timestamp, max_group_index, INT64_MAX);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;

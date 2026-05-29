@@ -1,9 +1,9 @@
 #pragma once
 
+#include <boost/unordered/unordered_flat_set.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include "engine/data_storage/column.h"
@@ -13,14 +13,10 @@
 struct CountDistinctVisitor : public ColumnVisitor {
 
     template <typename ColumnT>
-    void IntegralVisit(const ColumnT& col, const std::vector<size_t>& group_indices) {
+    void IntegralVisit(const ColumnT& col, const std::vector<size_t>& group_indices, size_t max_group_index) {
         const auto& data = col.Data();
         const size_t n = std::min(data.size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_integral_values, max_ind);
+        visitor_detail::EnsureCapacity(group_integral_values, max_group_index);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -28,19 +24,15 @@ struct CountDistinctVisitor : public ColumnVisitor {
         }
     }
 
-    void Visit(const Int8Column& col,   const std::vector<size_t>& gi) override { IntegralVisit(col, gi); }
-    void Visit(const Int16Column& col,  const std::vector<size_t>& gi) override { IntegralVisit(col, gi); }
-    void Visit(const Int32Column& col,  const std::vector<size_t>& gi) override { IntegralVisit(col, gi); }
-    void Visit(const Int64Column& col,  const std::vector<size_t>& gi) override { IntegralVisit(col, gi); }
+    void Visit(const Int8Column& col,   const std::vector<size_t>& gi, size_t mg) override { IntegralVisit(col, gi, mg); }
+    void Visit(const Int16Column& col,  const std::vector<size_t>& gi, size_t mg) override { IntegralVisit(col, gi, mg); }
+    void Visit(const Int32Column& col,  const std::vector<size_t>& gi, size_t mg) override { IntegralVisit(col, gi, mg); }
+    void Visit(const Int64Column& col,  const std::vector<size_t>& gi, size_t mg) override { IntegralVisit(col, gi, mg); }
 
-    void Visit(const Int128Column& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const Int128Column& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const auto& data = col.Data();
         const size_t n = std::min(data.size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_int128_values, max_ind);
+        visitor_detail::EnsureCapacity(group_int128_values, max_group_index);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -48,14 +40,10 @@ struct CountDistinctVisitor : public ColumnVisitor {
         }
     }
 
-    void Visit(const DoubleColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const DoubleColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const auto& data = col.Data();
         const size_t n = std::min(data.size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_double_values, max_ind);
+        visitor_detail::EnsureCapacity(group_double_values, max_group_index);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -63,13 +51,9 @@ struct CountDistinctVisitor : public ColumnVisitor {
         }
     }
 
-    void Visit(const StrColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const StrColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const size_t n = std::min(col.Size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_string_values, max_ind);
+        visitor_detail::EnsureCapacity(group_string_values, max_group_index);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -77,14 +61,10 @@ struct CountDistinctVisitor : public ColumnVisitor {
         }
     }
 
-    void Visit(const DateColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const DateColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const auto& data = col.Data();
         const size_t n = std::min(data.size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_integral_values, max_ind);
+        visitor_detail::EnsureCapacity(group_integral_values, max_group_index);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -92,14 +72,10 @@ struct CountDistinctVisitor : public ColumnVisitor {
         }
     }
 
-    void Visit(const TimeStampColumn& col, const std::vector<size_t>& group_indices) override {
+    void Visit(const TimeStampColumn& col, const std::vector<size_t>& group_indices, size_t max_group_index) override {
         const auto& data = col.Data();
         const size_t n = std::min(data.size(), group_indices.size());
-        size_t max_ind = 0;
-        for (size_t j = 0; j < n; ++j) {
-            if (group_indices[j] != SIZE_MAX && group_indices[j] > max_ind) max_ind = group_indices[j];
-        }
-        visitor_detail::EnsureCapacity(group_integral_values, max_ind);
+        visitor_detail::EnsureCapacity(group_integral_values, max_group_index);
         for (size_t j = 0; j < n; ++j) {
             size_t group_ind = group_indices[j];
             if (group_ind == SIZE_MAX) continue;
@@ -117,8 +93,8 @@ struct CountDistinctVisitor : public ColumnVisitor {
     }
 
 private:
-    std::vector<std::unordered_set<int64_t>>                                    group_integral_values;
-    std::vector<std::unordered_set<__int128_t, visitor_detail::Int128Hash>>     group_int128_values;
-    std::vector<std::unordered_set<double>>                                     group_double_values;
-    std::vector<std::unordered_set<std::string>>                                group_string_values;
+    std::vector<boost::unordered_flat_set<int64_t>>                                    group_integral_values;
+    std::vector<boost::unordered_flat_set<__int128_t, visitor_detail::Int128Hash>>     group_int128_values;
+    std::vector<boost::unordered_flat_set<double>>                                     group_double_values;
+    std::vector<boost::unordered_flat_set<std::string>>                                group_string_values;
 };

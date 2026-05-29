@@ -36,15 +36,15 @@ class DateColumn;
 class TimeStampColumn;
 
 struct ColumnVisitor {
-    virtual void Visit(const Int128Column& column, const std::vector<size_t>& group_indices) = 0;
-    virtual void Visit(const Int64Column& column, const std::vector<size_t>& group_indices) = 0;
-    virtual void Visit(const Int32Column& column, const std::vector<size_t>& group_indices) = 0;
-    virtual void Visit(const Int16Column& column, const std::vector<size_t>& group_indices) = 0;
-    virtual void Visit(const Int8Column& column, const std::vector<size_t>& group_indices) = 0;
-    virtual void Visit(const DoubleColumn& column, const std::vector<size_t>& group_indices) = 0;
-    virtual void Visit(const StrColumn& column, const std::vector<size_t>& group_indices) = 0;
-    virtual void Visit(const DateColumn& column, const std::vector<size_t>& group_indices) = 0;
-    virtual void Visit(const TimeStampColumn& column, const std::vector<size_t>& group_indices) = 0;
+    virtual void Visit(const Int128Column& column, const std::vector<size_t>& group_indices, size_t max_group_index) = 0;
+    virtual void Visit(const Int64Column& column, const std::vector<size_t>& group_indices, size_t max_group_index) = 0;
+    virtual void Visit(const Int32Column& column, const std::vector<size_t>& group_indices, size_t max_group_index) = 0;
+    virtual void Visit(const Int16Column& column, const std::vector<size_t>& group_indices, size_t max_group_index) = 0;
+    virtual void Visit(const Int8Column& column, const std::vector<size_t>& group_indices, size_t max_group_index) = 0;
+    virtual void Visit(const DoubleColumn& column, const std::vector<size_t>& group_indices, size_t max_group_index) = 0;
+    virtual void Visit(const StrColumn& column, const std::vector<size_t>& group_indices, size_t max_group_index) = 0;
+    virtual void Visit(const DateColumn& column, const std::vector<size_t>& group_indices, size_t max_group_index) = 0;
+    virtual void Visit(const TimeStampColumn& column, const std::vector<size_t>& group_indices, size_t max_group_index) = 0;
 
     virtual ~ColumnVisitor() = default;
 };
