@@ -268,6 +268,9 @@ private:
             std::string_view view_key{temp_key_buf.data(), temp_key_buf.size()};
             auto it = groups_aggs.find(view_key);
             if (it == groups_aggs.end()) {
+                if (keys_buf.size() + view_key.size() > UINT32_MAX) {
+                    throw std::runtime_error("GroupByExecutor: keys buffer exceeded 4 GB (uint32_t offset overflow)");
+                }
                 const uint32_t offset = static_cast<uint32_t>(keys_buf.size());
                 keys_buf.insert(keys_buf.end(), view_key.data(), view_key.data() + view_key.size());
                 it = groups_aggs.emplace(GroupKey{offset, static_cast<uint32_t>(view_key.size())}, groups_count++).first;
