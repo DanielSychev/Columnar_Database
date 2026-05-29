@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <vector>
 
-Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), batch_rows_count(batch_rows_count) {
+Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), max_rows_count(batch_rows_count) {
     has_schema = true;
     columns.resize(schema.NumColumns());
     for (size_t i = 0; i < columns.size(); ++i) {
@@ -13,7 +13,7 @@ Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), ba
     }
 }
 
-Batch::Batch(size_t batch_rows_count) : batch_rows_count(batch_rows_count) {
+Batch::Batch(size_t batch_rows_count) : max_rows_count(batch_rows_count) {
 }
 
 void Batch::AddRow(Row&& row) {
@@ -23,7 +23,7 @@ void Batch::AddRow(Row&& row) {
     if (row.size() != columns.size()) {
         throw std::runtime_error("wrong schema formart / wrong row lenght");
     }
-    if (rows_count >= batch_rows_count) {
+    if (rows_count >= max_rows_count) {
         throw std::runtime_error("batch is full");
     }
     for (size_t i = 0; i < row.size(); ++i) {
@@ -119,7 +119,7 @@ bool Batch::HasSchema() const {
 }
 
 void Batch::SetRowsCount(size_t row_count) {
-    if (row_count > batch_rows_count) {
+    if (row_count > max_rows_count) {
         throw std::runtime_error("wrong batch format");
     }
     if (rows_count == 0) {
@@ -140,7 +140,7 @@ size_t Batch::ColumnsCount() const {
 }
 
 size_t Batch::MaxRowsCount() const {
-    return batch_rows_count;
+    return max_rows_count;
 }
 
 bool Batch::Empty() const {
@@ -157,7 +157,7 @@ void Batch::ValidateColumnIndex(size_t column_index, size_t row_count) const {
     if (columns[column_index]->Size() != 0) {
         throw std::runtime_error("column is already filled");
     }
-    if (row_count > batch_rows_count) {
+    if (row_count > max_rows_count) {
         throw std::runtime_error("too many rows for batch");
     }
 }

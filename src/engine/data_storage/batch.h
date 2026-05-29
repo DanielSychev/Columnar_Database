@@ -37,7 +37,7 @@ private:
 
     Schema schema;
     std::vector<std::shared_ptr<Column>> columns;
-    size_t batch_rows_count;
+    size_t max_rows_count;
     size_t rows_count = 0;
     bool has_schema = false;
 };
