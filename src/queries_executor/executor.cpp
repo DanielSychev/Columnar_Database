@@ -168,7 +168,7 @@ public:
                 }
             }
             for (auto& aggr: aggregation_operator_->aggs) {
-                aggr->RunBatch(batch, group_indices);
+                aggr->RunBatch(batch, group_indices, 0);
             }
         }
         Schema result_schema;
@@ -275,7 +275,7 @@ private:
             group_indices[row_index] = it->second;
         }
         for (auto& aggr : aggs) {
-            aggr->RunBatch(batch, group_indices);
+            aggr->RunBatch(batch, group_indices, groups_count == 0 ? 0 : groups_count - 1);
         }
     }
 
