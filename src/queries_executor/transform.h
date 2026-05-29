@@ -109,17 +109,9 @@ struct CaseWhenTransform: public Transform {
         Type ResultType(const Schema& input_schema) const override;
         std::shared_ptr<Column> Apply(const Batch& batch) const override;
 private:
-    void Resolve(const Schema& schema) const;
-
     std::vector<std::string> condition_column_names;
     std::vector<std::string> condition_values;
     std::vector<CompareSign> condition_signs;
     std::string column_true;
     std::string column_false;
-
-    mutable std::vector<size_t> condition_column_indices;
-    mutable size_t column_true_index = SIZE_MAX;
-    mutable size_t column_false_index = SIZE_MAX;
-    mutable Type result_type_cache = Type::str;
-    mutable bool resolved = false;
 };
