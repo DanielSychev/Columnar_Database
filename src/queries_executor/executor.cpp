@@ -12,7 +12,8 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <boost/unordered/unordered_flat_map.hpp>
+// #include <boost/unordered/unordered_flat_map.hpp>
+#include <unordered_map>
 
 namespace {
 std::shared_ptr<PipelineExecutor> CreateChildExecutor(const std::shared_ptr<Operator>& child, std::string_view context) {
@@ -310,7 +311,7 @@ private:
     std::vector<char> keys_buf;
     std::vector<char> temp_key_buf;
     std::vector<uint32_t> group_indices;
-    boost::unordered_flat_map<GroupKey, uint32_t, GroupKeyHash, GroupKeyEqual> groups_aggs{16, GroupKeyHash{&keys_buf}, GroupKeyEqual{&keys_buf}};
+    std::unordered_map<GroupKey, uint32_t, GroupKeyHash, GroupKeyEqual> groups_aggs{16, GroupKeyHash{&keys_buf}, GroupKeyEqual{&keys_buf}};
 };
 
 class OrderByExecutor : public PipelineExecutor {
