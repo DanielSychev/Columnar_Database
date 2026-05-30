@@ -134,61 +134,37 @@ std::shared_ptr<Column> CreateColumn(Type type, const std::vector<std::string>& 
     }
 }
 
-StrColumn::StrColumn(const std::vector<std::string>& data_) : count(data_.size()) {
-    offsets.reserve(count + 1);
-    for (const auto& s : data_) {
-        buf.insert(buf.end(), s.begin(), s.end());
-        offsets.push_back(buf.size());
-    }
-}
-
-StrColumn::StrColumn(std::vector<std::string>&& data_) : StrColumn(data_) {}
-
-StrColumn::StrColumn(std::vector<char>&& buf_, std::vector<size_t>&& offsets_, size_t count_)
-    : buf(std::move(buf_)), offsets(std::move(offsets_)), count(count_) {}
-
-StrColumn::StrColumn(const StrColumn& other, const std::vector<bool>& banned) {
-    for (size_t i = 0; i < other.count; ++i) {
-        if (i < banned.size() && banned[i]) continue;
-        const auto sv = other.GetElemView(i);
-        buf.insert(buf.end(), sv.begin(), sv.end());
-        offsets.push_back(buf.size());
-        ++count;
-    }
-}
+StrColumn::StrColumn(const std::vector<std::string>& data_) : data(data_) {}
+StrColumn::StrColumn(std::vector<std::string>&& data_) : data(std::move(data_)) {}
 
 void StrColumn::AppendStr(std::string&& s) {
-    buf.insert(buf.end(), s.begin(), s.end());
-    offsets.push_back(buf.size());
-    ++count;
+    data.push_back(std::move(s));
 }
 
 void StrColumn::PrintMf(Writer& w) const {
-    std::vector<std::string_view> strings(count);
-    for (size_t i = 0; i < count; ++i) {
-        strings[i] = GetElemView(i);
-    }
-    dictionary_encoding::Encode(w, strings);
+    std::vector<std::string_view> views(data.size());
+    for (size_t i = 0; i < data.size(); ++i) views[i] = data[i];
+    dictionary_encoding::Encode(w, views);
 }
 
 void StrColumn::ReadMf(Reader& r) {
-    dictionary_encoding::Decode(r, buf, offsets, count);
+    dictionary_encoding::Decode(r, data);
 }
 
 void StrColumn::PrintElemCsv(Writer& w, size_t i, bool b) const {
-    if (i >= count) return;
-    w.WriteElem(GetElemView(i), b);
+    if (i >= data.size()) return;
+    w.WriteElem(std::string_view(data[i]), b);
 }
 
 std::string StrColumn::GetElemToString(size_t index) const {
-    if (index >= count) {
+    if (index >= data.size()) {
         throw std::out_of_range("index out of range in GetElemToString");
     }
-    return std::string(GetElemView(index));
+    return data[index];
 }
 
 std::string_view StrColumn::GetElemView(size_t index) const {
-    return { buf.data() + offsets[index], offsets[index + 1] - offsets[index] };
+    return data[index];
 }
 
 void StrColumn::Accept(ColumnVisitor& visitor, const std::vector<uint32_t>& group_indices, size_t max_group_index) const {
@@ -199,7 +175,7 @@ bool StrColumn::Compare(const std::string& elem, size_t i, CompareSign sign) con
     if (sign == CompareSign::IN) {
         throw std::runtime_error("IN sign is not supported for StrColumn");
     }
-    const auto sv = GetElemView(i);
+    std::string_view sv(data[i]);
     if (sign == CompareSign::LIKE) {
         return LikeCompare(sv, elem);
     }
@@ -215,50 +191,41 @@ void StrColumn::Filter(const std::string& value, CompareSign sign, std::vector<b
     }
     const std::string_view pattern(value);
     if (sign == CompareSign::LIKE) {
-        for (size_t i = 0; i < count; ++i) {
+        for (size_t i = 0; i < data.size(); ++i) {
             if (banned[i]) continue;
-            if (!LikeCompare(GetElemView(i), pattern)) banned[i] = true;
+            if (!LikeCompare(data[i], pattern)) banned[i] = true;
         }
         return;
     }
     if (sign == CompareSign::NOT_LIKE) {
-        for (size_t i = 0; i < count; ++i) {
+        for (size_t i = 0; i < data.size(); ++i) {
             if (banned[i]) continue;
-            if (LikeCompare(GetElemView(i), pattern)) banned[i] = true;
+            if (LikeCompare(data[i], pattern)) banned[i] = true;
         }
         return;
     }
-    for (size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < data.size(); ++i) {
         if (banned[i]) continue;
-        if (!column_detail::BasicCompare(GetElemView(i), pattern, sign)) {
+        if (!column_detail::BasicCompare(std::string_view(data[i]), pattern, sign)) {
             banned[i] = true;
         }
     }
 }
 
 std::shared_ptr<Column> StrColumn::CopyFiltered(const std::vector<bool>& banned) const {
-    return std::make_shared<StrColumn>(*this, banned);
+    return std::make_shared<StrColumn>(column_detail::CopyAllowedValues(data, banned));
 }
 
 std::shared_ptr<Column> StrColumn::CopyReordered(const std::vector<size_t>& ordered) const {
-    std::vector<char> new_buf;
-    std::vector<size_t> new_offsets;
-    new_offsets.reserve(ordered.size() + 1);
-    new_offsets.push_back(0);
-    for (size_t idx : ordered) {
-        const auto sv = GetElemView(idx);
-        new_buf.insert(new_buf.end(), sv.begin(), sv.end());
-        new_offsets.push_back(new_buf.size());
-    }
-    return std::make_shared<StrColumn>(std::move(new_buf), std::move(new_offsets), ordered.size());
+    return std::make_shared<StrColumn>(column_detail::CopyReorderedValues(data, ordered));
 }
 
 size_t StrColumn::Size() const {
-    return count;
+    return data.size();
 }
 
 void StrColumn::BinaryWriteInBuf(std::vector<char>& out, size_t index) const {
-    const std::string_view sv = GetElemView(index);
+    std::string_view sv(data[index]);
     const uint32_t len = static_cast<uint32_t>(sv.size());
     const char* len_ptr = reinterpret_cast<const char*>(&len);
     out.insert(out.end(), len_ptr, len_ptr + sizeof(len));
@@ -269,34 +236,30 @@ void StrColumn::BinaryReadFromBuf(const char*& ptr) {
     uint32_t len;
     std::memcpy(&len, ptr, sizeof(len));
     ptr += sizeof(len);
-    buf.insert(buf.end(), ptr, ptr + len);
-    offsets.push_back(buf.size());
-    ++count;
+    data.emplace_back(ptr, len);
     ptr += len;
 }
 
 void StrColumn::AppendRaw(std::string_view sv) {
-    buf.insert(buf.end(), sv.begin(), sv.end());
-    offsets.push_back(buf.size());
-    ++count;
+    data.emplace_back(sv);
 }
 
 std::string StrColumn::ValueAt(size_t index) const {
-    if (index >= count) {
+    if (index >= data.size()) {
         throw std::out_of_range("index out of range in ValueAt");
     }
-    return std::string(GetElemView(index));
+    return data[index];
 }
 
 int StrColumn::CompareAt(size_t index, const Column& other, size_t other_index) const {
     const auto& o = static_cast<const StrColumn&>(other);
-    const int raw = GetElemView(index).compare(o.GetElemView(other_index));
+    const int raw = std::string_view(data[index]).compare(o.data[other_index]);
     return (raw > 0) - (raw < 0);
 }
 
 void StrColumn::AppendFrom(const Column& other, size_t index) {
     const auto& o = static_cast<const StrColumn&>(other);
-    AppendRaw(o.GetElemView(index));
+    data.push_back(o.data[index]);
 }
 
 void DateColumn::AppendStr(std::string&& s) {

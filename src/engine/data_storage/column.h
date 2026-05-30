@@ -386,7 +386,6 @@ public:
     StrColumn() = default;
     explicit StrColumn(const std::vector<std::string>& data_);
     explicit StrColumn(std::vector<std::string>&& data_);
-    StrColumn(const StrColumn& other, const std::vector<bool>& banned);
     void AppendStr(std::string&&) override;
     void PrintMf(Writer&) const override;
     void ReadMf(Reader&) override;
@@ -403,14 +402,11 @@ public:
     void BinaryReadFromBuf(const char*& ptr) override;
     void AppendRaw(std::string_view sv);
     std::string ValueAt(size_t index) const;
-    StrColumn(std::vector<char>&& buf_, std::vector<size_t>&& offsets_, size_t count_);
     int CompareAt(size_t index, const Column& other, size_t other_index) const override;
     void AppendFrom(const Column& other, size_t index) override;
     ~StrColumn() override = default;
 private:
-    std::vector<char> buf;
-    std::vector<size_t> offsets{0};
-    size_t count = 0;
+    std::vector<std::string> data;
 };
 
 class DateColumn : public Column {
