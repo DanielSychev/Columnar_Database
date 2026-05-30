@@ -73,43 +73,6 @@ inline void Encode(Writer& writer, const std::vector<std::string_view>& data) {
     writer.BinaryWriteVector(indices);
 }
 
-inline void Decode(Reader& reader, std::vector<std::string>& out) {
-    Tag tag;
-    reader.BinaryRead(tag);
-    out.clear();
-    if (tag == Tag::RAW) {
-        size_t count;
-        reader.BinaryRead(count);
-        out.reserve(count);
-        for (size_t i = 0; i < count; ++i) {
-            size_t str_size;
-            reader.BinaryRead(str_size);
-            out.emplace_back(str_size, '\0');
-            if (str_size > 0 && !reader.ReadNBytes(out.back().data(), str_size)) {
-                throw std::runtime_error("not enough bytes to read string");
-            }
-        }
-        return;
-    }
-    size_t dict_size;
-    reader.BinaryRead(dict_size);
-    std::vector<std::string> dict(dict_size);
-    for (size_t i = 0; i < dict_size; ++i) {
-        size_t str_size;
-        reader.BinaryRead(str_size);
-        dict[i].resize(str_size);
-        if (str_size > 0 && !reader.ReadNBytes(dict[i].data(), str_size)) {
-            throw std::runtime_error("not enough bytes to read string");
-        }
-    }
-    std::vector<uint32_t> indices;
-    reader.BinaryReadVector(indices);
-    out.reserve(indices.size());
-    for (uint32_t idx : indices) {
-        out.push_back(dict[idx]);
-    }
-}
-
 inline void Decode(Reader& reader, std::vector<char>& buf, std::vector<size_t>& offsets, size_t& count) {
     Tag tag;
     reader.BinaryRead(tag);
