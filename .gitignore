@@ -1,3 +1,29 @@
+# OS / IDE
+.DS_Store
+.idea/
+
 .cache
-build
+
+cmake-build-*/
+build*/
+
 .vscode
+
+src/TestFiles/hits_sample.csv
+src/TestFiles/schema_sample.csv
+
+# Local generated test artifacts
+src/TestFiles/*.mf
+src/TestFiles/*_output.csv
+
+.clangd
+
+src/TestFiles
+
+experiments/
+Dockerfile
+data/
+
+.dockerignore
+
+*.md
