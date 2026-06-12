@@ -49,9 +49,9 @@ void RunCsvToMf(const std::string& schema_path, const std::string& data_path, co
         throw std::runtime_error("cannot open output file: " + mf_output_path);
     }
 
-    Engine engine(data_stream, writer_stream, schema_stream);
+    MfFileWriter writer(data_stream, writer_stream, schema_stream);
     const auto start_time = std::chrono::steady_clock::now();
-    engine.CsvToMfProcessor();
+    writer.Convert();
     const auto end_time = std::chrono::steady_clock::now();
     const std::chrono::duration<double> elapsed = end_time - start_time;
     std::cout << "CSV to MF took " << elapsed.count() << " seconds\n";
@@ -72,9 +72,9 @@ void RunMfToCsv(const std::string& mf_input_path, const std::string& csv_output_
         throw std::runtime_error("cannot open output file: " + schema_output_path);
     }
 
-    Engine engine(data_stream, data_writer_stream, scheme_writer_stream);
+    MfFileReader reader(data_stream, data_writer_stream, scheme_writer_stream);
     const auto start_time = std::chrono::steady_clock::now();
-    engine.MfToCsvProcessor();
+    reader.Convert();
     const auto end_time = std::chrono::steady_clock::now();
     const std::chrono::duration<double> elapsed = end_time - start_time;
     std::cout << "MF to CSV took " << elapsed.count() << " seconds\n";

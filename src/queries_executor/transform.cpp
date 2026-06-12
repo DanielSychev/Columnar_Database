@@ -1,35 +1,14 @@
 #include "queries_executor/transform.h"
+#include "engine/data_storage/column.h"
 #include "queries_executor/helpers.h"
 #include <re2/re2.h>
 #include <utils.h>
 #include <cstdint>
-#include <numeric>
 #include <stdexcept>
 #include <string_view>
+#include <utility>
 
 namespace {
-int64_t ParseMinute(std::string_view timestamp) {
-    if (timestamp.size() < 16 || timestamp[13] != ':') {
-        throw std::runtime_error("wrong timestamp format for ExtractMinuteTransform");
-    }
-    const char tens = timestamp[14];
-    const char ones = timestamp[15];
-    if (tens < '0' || tens > '5' || ones < '0' || ones > '9') {
-        throw std::runtime_error("wrong minute format for ExtractMinuteTransform");
-    }
-    return static_cast<int64_t>((tens - '0') * 10 + (ones - '0'));
-}
-
-std::string TruncateTimestampToMinute(std::string_view timestamp) {
-    if (timestamp.size() < 16 || timestamp[4] != '-' || timestamp[7] != '-' ||
-        timestamp[10] != ' ' || timestamp[13] != ':') {
-        throw std::runtime_error("wrong timestamp format for DateTruncMinuteTransform");
-    }
-
-    std::string truncated(timestamp.substr(0, 16));
-    truncated += ":00";
-    return truncated;
-}
 
 size_t ExpectSourceType(
     const Schema& schema,
@@ -65,9 +44,14 @@ const ColumnT& GetTypedColumn(
 }
 
 template <typename ColumnT>
-std::vector<int64_t> ConvertToInt64(const Batch& batch, size_t column_index) {
-    const auto& int_column = GetTypedColumn<ColumnT>(batch, column_index, "integer", "AddTransform");
-    return std::vector<int64_t>(int_column.Data().begin(), int_column.Data().end());
+std::vector<int64_t> CopyAddInt64(const Batch& batch, size_t column_index, int64_t value) {
+    const auto& int_column = GetTypedColumn<ColumnT>(batch, column_index, "int", "AddTransform");
+    const auto& data = int_column.Data();
+    std::vector<int64_t> result(data.size());
+    for (size_t j = 0; j < data.size(); ++j) {
+        result[j] = static_cast<int64_t>(data[j]) + value;
+    }
+    return result;
 }
 }
 
@@ -86,34 +70,25 @@ ExtractMinuteTransform::ExtractMinuteTransform(const std::string& source_column_
 }
 
 Type ExtractMinuteTransform::ResultType(const Schema& input_schema) const {
-    ExpectSourceType(
-        input_schema,
-        source_column_name,
-        Type::timestamp,
-        "TIMESTAMP",
-        "ExtractMinuteTransform"
-    );
+    if (column_index_mem == SIZE_MAX) {
+        column_index_mem = ExpectSourceType(input_schema, source_column_name, Type::timestamp, "TIMESTAMP", "ExtractMinuteTransform");
+    }
     return Type::int64;
 }
 
 std::shared_ptr<Column> ExtractMinuteTransform::Apply(const Batch& batch) const {
-    const size_t column_index = ExpectSourceType(
-        batch.GetSchema(),
-        source_column_name,
-        Type::timestamp,
-        "TIMESTAMP",
-        "ExtractMinuteTransform"
-    );
+    if (column_index_mem == SIZE_MAX) {
+        column_index_mem = ExpectSourceType(batch.GetSchema(), source_column_name, Type::timestamp, "TIMESTAMP", "ExtractMinuteTransform");
+    }
     const auto& timestamp_column =
-        GetTypedColumn<StrColumn>(batch, column_index, "TIMESTAMP", "ExtractMinuteTransform");
+        GetTypedColumn<TimeStampColumn>(batch, column_index_mem, "TIMESTAMP", "ExtractMinuteTransform");
 
     const auto& data = timestamp_column.Data();
     std::vector<int64_t> minutes(batch.RowsCount(), 0);
     for (size_t j = 0; j < batch.RowsCount(); ++j) {
-        if (batch.HasMask() && batch.banned_rows[j]) continue;
-        minutes[j] = ParseMinute(data[j]);
+        minutes[j] = data[j].m;
     }
-    return std::make_shared<Int64Column>(minutes);
+    return std::make_shared<Int64Column>(std::move(minutes));
 }
 
 DateTruncMinuteTransform::DateTruncMinuteTransform(const std::string& source_column_name_, const std::string& result_name_)
@@ -124,32 +99,24 @@ DateTruncMinuteTransform::DateTruncMinuteTransform(const std::string& source_col
 }
 
 Type DateTruncMinuteTransform::ResultType(const Schema& input_schema) const {
-    ExpectSourceType(
-        input_schema,
-        source_column_name,
-        Type::timestamp,
-        "TIMESTAMP",
-        "DateTruncMinuteTransform"
-    );
+    if (column_index_mem == SIZE_MAX) {
+        column_index_mem = ExpectSourceType(input_schema, source_column_name, Type::timestamp, "TIMESTAMP", "DateTruncMinuteTransform");
+    }
     return Type::timestamp;
 }
 
 std::shared_ptr<Column> DateTruncMinuteTransform::Apply(const Batch& batch) const {
-    const size_t column_index = ExpectSourceType(
-        batch.GetSchema(),
-        source_column_name,
-        Type::timestamp,
-        "TIMESTAMP",
-        "DateTruncMinuteTransform"
-    );
+    if (column_index_mem == SIZE_MAX) {
+        column_index_mem = ExpectSourceType(batch.GetSchema(), source_column_name, Type::timestamp, "TIMESTAMP", "DateTruncMinuteTransform");
+    }
     const auto& timestamp_column =
-        GetTypedColumn<StrColumn>(batch, column_index, "TIMESTAMP", "DateTruncMinuteTransform");
+        GetTypedColumn<TimeStampColumn>(batch, column_index_mem, "TIMESTAMP", "DateTruncMinuteTransform");
 
     const auto& data = timestamp_column.Data();
-    std::vector<std::string> values(batch.RowsCount());
+    std::vector<TimeStamp> values(batch.RowsCount());
     for (size_t j = 0; j < batch.RowsCount(); ++j) {
-        if (batch.HasMask() && batch.banned_rows[j]) continue;
-        values[j] = TruncateTimestampToMinute(data[j]);
+        values[j] = data[j];
+        values[j].s = 0;
     }
     return std::make_shared<TimeStampColumn>(std::move(values));
 }
@@ -163,32 +130,22 @@ LengthTransform::LengthTransform(const std::string& source_column_name_, const s
 }
 
 Type LengthTransform::ResultType(const Schema& input_schema) const {
-    ExpectSourceType(
-        input_schema,
-        source_column_name,
-        Type::str,
-        "STRING",
-        "LengthTransform"
-    );
+    if (column_index_mem == SIZE_MAX) {
+        column_index_mem = ExpectSourceType(input_schema, source_column_name, Type::str, "STRING", "LengthTransform");
+    }
     return Type::int64;
 }
 
 std::shared_ptr<Column> LengthTransform::Apply(const Batch& batch) const {
-    const size_t column_index = ExpectSourceType(
-        batch.GetSchema(),
-        source_column_name,
-        Type::str,
-        "STRING",
-        "LengthTransform"
-    );
-    const auto& str_column = GetTypedColumn<StrColumn>(batch, column_index, "STRING", "LengthTransform");
-    const auto& data = str_column.Data();
+    if (column_index_mem == SIZE_MAX) {
+        column_index_mem = ExpectSourceType(batch.GetSchema(), source_column_name, Type::str, "STRING", "LengthTransform");
+    }
+    const auto& str_column = GetTypedColumn<StrColumn>(batch, column_index_mem, "STRING", "LengthTransform");
     std::vector<int64_t> lengths(batch.RowsCount(), 0);
     for (size_t j = 0; j < batch.RowsCount(); ++j) {
-        if (batch.HasMask() && batch.banned_rows[j]) continue;
-        lengths[j] = static_cast<int64_t>(data[j].size());
+        lengths[j] = static_cast<int64_t>(str_column.GetElemView(j).size());
     }
-    return std::make_shared<Int64Column>(lengths);
+    return std::make_shared<Int64Column>(std::move(lengths));
 }
 
 
@@ -200,34 +157,36 @@ RegexpReplaceTransform::RegexpReplaceTransform(const std::string& source_column_
 }
 
 Type RegexpReplaceTransform::ResultType(const Schema& input_schema) const {
-    ExpectSourceType(
-        input_schema,
-        source_column_name,
-        Type::str,
-        "STRING",
-        "RegexpReplaceTransform"
-    );
+    if (column_index_mem == SIZE_MAX) {
+        column_index_mem = ExpectSourceType(input_schema, source_column_name, Type::str, "STRING", "RegexpReplaceTransform");
+    }
     return Type::str;
 }
 
 std::shared_ptr<Column> RegexpReplaceTransform::Apply(const Batch& batch) const {
-    const size_t column_index = ExpectSourceType(
-        batch.GetSchema(),
-        source_column_name,
-        Type::str,
-        "STRING",
-        "RegexpReplaceTransform"
-    );
-    const auto& str_column =
-        GetTypedColumn<StrColumn>(batch, column_index, "STRING", "RegexpReplaceTransform");
-    const auto& data = str_column.Data();
-    std::vector<std::string> values(batch.RowsCount());
-    for (size_t j = 0; j < batch.RowsCount(); ++j) {
-        if (batch.HasMask() && batch.banned_rows[j]) continue;
-        values[j] = data[j];
-        RE2::GlobalReplace(&values[j], regex_pattern, replacement);
+    if (column_index_mem == SIZE_MAX) {
+        column_index_mem = ExpectSourceType(batch.GetSchema(), source_column_name, Type::str, "STRING", "RegexpReplaceTransform");
     }
-    return std::make_shared<StrColumn>(values);
+    const auto& str_column =
+        GetTypedColumn<StrColumn>(batch, column_index_mem, "STRING", "RegexpReplaceTransform");
+    const size_t n = batch.RowsCount();
+    std::vector<std::string> values(n);
+    if (batch.HasMask()) {
+        const auto& banned = batch.banned_rows;
+        for (size_t j = 0; j < n; ++j) {
+            if (banned[j]) continue;
+            const auto view = str_column.GetElemView(j);
+            values[j].assign(view.data(), view.size());
+            RE2::GlobalReplace(&values[j], regex_pattern, replacement);
+        }
+    } else {
+        for (size_t j = 0; j < n; ++j) {
+            const auto view = str_column.GetElemView(j);
+            values[j].assign(view.data(), view.size());
+            RE2::GlobalReplace(&values[j], regex_pattern, replacement);
+        }
+    }
+    return std::make_shared<StrColumn>(std::move(values));
 }
 
 
@@ -238,39 +197,41 @@ AddTransform::AddTransform(const std::string& source_column_name_, int64_t value
 }
 
 Type AddTransform::ResultType(const Schema& input_schema) const {
-    const auto input_type = queries_executor_detail::ResolveColumn(input_schema, source_column_name, "AddTransform").first;
-    if (allowed_types.find(input_type) == allowed_types.end()) {
-        throw std::runtime_error(
-            "AddTransform expects integer column as source, got " + std::string(TypeToString(input_type)) + " for column " + source_column_name
-        );
+    if (column_index_mem == SIZE_MAX) {
+        const auto [input_type, column_index] = queries_executor_detail::ResolveColumn(input_schema, source_column_name, "AddTransform");
+        if (allowed_types.find(input_type) == allowed_types.end()) {
+            throw std::runtime_error(
+                "AddTransform expects integer column as source, got " + std::string(TypeToString(input_type)) + " for column " + source_column_name
+            );
+        }
+        column_index_mem = column_index;
+        input_type_mem = input_type;
     }
     return Type::int64;
 }
 
 std::shared_ptr<Column>  AddTransform::Apply(const Batch& batch) const {
-    ResultType(batch.GetSchema()); // Check source type and throw if it's wrong.
-    auto [input_type, column_index] = queries_executor_detail::ResolveColumn(batch.GetSchema(), source_column_name, "AddTransform");
-    std::vector<int64_t> input_values;
-    switch (input_type) {
+    if (column_index_mem == SIZE_MAX) {
+        ResultType(batch.GetSchema());
+    }
+    std::vector<int64_t> result;
+    switch (input_type_mem) {
         case Type::int64:
-            input_values = ConvertToInt64<Int64Column>(batch, column_index);
-             break;
+            result = CopyAddInt64<Int64Column>(batch, column_index_mem, value);
+            break;
         case Type::int32:
-            input_values = ConvertToInt64<Int32Column>(batch, column_index);
+            result = CopyAddInt64<Int32Column>(batch, column_index_mem, value);
             break;
         case Type::int16:
-            input_values = ConvertToInt64<Int16Column>(batch, column_index);
+            result = CopyAddInt64<Int16Column>(batch, column_index_mem, value);
             break;
         case Type::int8:
-            input_values = ConvertToInt64<Int8Column>(batch, column_index);
+            result = CopyAddInt64<Int8Column>(batch, column_index_mem, value);
             break;
         default:
             throw std::runtime_error("unexpected type for AddTransform source column");
     }
-    for (auto& v : input_values) {
-        v += value;
-    }
-    return std::make_shared<Int64Column>(input_values);
+    return std::make_shared<Int64Column>(std::move(result));
 }
 
 SubTransform::SubTransform(const std::string& source_column_name_, int64_t value_, const std::string& result_name_) : AddTransform(source_column_name_, -value_, result_name_) {
@@ -280,19 +241,19 @@ SubTransform::SubTransform(const std::string& source_column_name_, int64_t value
 }
 
 
-ConstantTransform::ConstantTransform(const std::string& value_, const std::string& result_name_) : Transform(result_name_), value(value_) {
+ConstantInt8Transform::ConstantInt8Transform(const int8_t& value_, const std::string& result_name_) : Transform(result_name_), value(value_) {
     if (result_name_.empty()) {
-        result_name = value_;
+        result_name = std::to_string(value_);
     }
 }
 
-Type ConstantTransform::ResultType(const Schema&) const {
-    return Type::str;
+Type ConstantInt8Transform::ResultType(const Schema&) const {
+    return Type::int8;
 }
 
-std::shared_ptr<Column> ConstantTransform::Apply(const Batch& batch) const {
-    std::vector<std::string> values(batch.RowsCount(), value);
-    return std::make_shared<StrColumn>(values);
+std::shared_ptr<Column> ConstantInt8Transform::Apply(const Batch& batch) const {
+    std::vector<int8_t> values(batch.RowsCount(), value);
+    return std::make_shared<Int8Column>(std::move(values));
 }
 
 
@@ -304,24 +265,27 @@ RenameTransform::RenameTransform(const std::string& source_column_name_, const s
 }
 
 Type RenameTransform::ResultType(const Schema& input_schema) const {
-    return queries_executor_detail::ResolveColumn(input_schema, source_column_name, "RenameTransform").first;
+    if (column_index_mem == SIZE_MAX) {
+        const auto [input_type, column_index] =
+            queries_executor_detail::ResolveColumn(input_schema, source_column_name, "RenameTransform");
+        column_index_mem = column_index;
+        return input_type;
+    }
+    return input_schema.ColumnTypeAt(column_index_mem);
 }
 
 std::shared_ptr<Column> RenameTransform::Apply(const Batch& batch) const {
-    const auto [input_type, column_index] =
-        queries_executor_detail::ResolveColumn(batch.GetSchema(), source_column_name, "RenameTransform");
-    (void)input_type;
-
-    std::vector<size_t> ordered(batch.RowsCount());
-    std::iota(ordered.begin(), ordered.end(), 0);
-    return batch.ColumnAt(column_index).CopyReordered(ordered);
+    if (column_index_mem == SIZE_MAX) {
+        column_index_mem = queries_executor_detail::ResolveColumn(batch.GetSchema(), source_column_name, "RenameTransform").second;
+    }
+    return batch.ColumnSharedAt(column_index_mem);
 }
 
 
-CaseWhenTransform::CaseWhenTransform(const std::vector<std::string>& condition_column_names_, const std::vector<std::string>& condition_values_, const std::vector<CompareSign>& condition_signs_, 
-    const std::string& column_true_, const std::string& column_false_, const std::string& result_name_) 
+CaseWhenTransform::CaseWhenTransform(const std::vector<std::string>& condition_column_names_, const std::vector<std::string>& condition_values_, const std::vector<CompareSign>& condition_signs_,
+    const std::string& column_true_, const std::string& column_false_, const std::string& result_name_)
         : Transform(result_name_), condition_column_names(condition_column_names_), condition_values(condition_values_), condition_signs(condition_signs_), column_true(column_true_), column_false(column_false_) {
-    
+
     if (condition_column_names.size() != condition_values.size() || condition_column_names.size() != condition_signs.size()) {
         throw std::runtime_error("condition vectors must have the same size for CaseWhenTransform");
     }

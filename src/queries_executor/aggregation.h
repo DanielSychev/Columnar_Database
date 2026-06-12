@@ -5,14 +5,19 @@
 #include "engine/data_storage/visitors/numeric_visitor.h"
 #include "engine/data_storage/visitors/date_visitor.h"
 #include "engine/data_storage/visitors/count_distinct_visitor.h"
+#include <cstddef>
 #include <memory>
 #include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 
 struct Aggregation {
-    Aggregation(std::string column_name_, std::string result_name_ = "") : column_name(column_name_), result_name(result_name_) {}
-    virtual void RunBatch(std::shared_ptr<Batch>) = 0;
-    virtual void RunRow(std::shared_ptr<Batch>, size_t) = 0;
-    virtual std::string GetResultValue() const = 0;
+    Aggregation(std::string column_name_, std::string result_name_ = "")
+        : column_name(std::move(column_name_)), result_name(std::move(result_name_)) {}
+    virtual void RunBatch(const std::shared_ptr<Batch>&, const std::vector<uint32_t>& group_indices, size_t max_group_index) = 0;
+    virtual std::string GetResultValue(size_t group_index) const = 0;
+    virtual void GetResultInto(Column& column, size_t group_index) const = 0;
     virtual Type GetResultType() const = 0;
     virtual std::shared_ptr<Aggregation> Clone() const = 0;
     virtual ~Aggregation() = default;
@@ -20,50 +25,50 @@ struct Aggregation {
     std::string column_name;
     std::string result_name;
     std::optional<Type> input_type;
-    size_t column_index = -1u;
+    size_t column_index_cache = SIZE_MAX;
 };
 
 struct CountAggregation : public Aggregation {
     CountAggregation(std::string result_name_ = "");
-    void RunBatch(std::shared_ptr<Batch>) override;
-    void RunRow(std::shared_ptr<Batch>, size_t) override;
-    virtual ~CountAggregation() = default;
-    std::string GetResultValue() const override;
+    void RunBatch(const std::shared_ptr<Batch>&, const std::vector<uint32_t>& group_indices, size_t max_group_index) override;
+    std::string GetResultValue(size_t group_index) const override;
+    void GetResultInto(Column& column, size_t group_index) const override;
     Type GetResultType() const override;
     std::shared_ptr<Aggregation> Clone() const override;
+    virtual ~CountAggregation() = default;
 
-    size_t rows_count = 0;
+    std::vector<size_t> rows_count;
 };
 
 struct SumAggregation : public Aggregation {
-    SumAggregation(const std::string col_name, std::string result_name = "");
-    void RunBatch(std::shared_ptr<Batch>) override;
-    void RunRow(std::shared_ptr<Batch>, size_t) override;
-    std::string GetResultValue() const override;
+    SumAggregation(std::string col_name, std::string result_name = "");
+    void RunBatch(const std::shared_ptr<Batch>&, const std::vector<uint32_t>& group_indices, size_t max_group_index) override;
+    std::string GetResultValue(size_t group_index) const override;
+    void GetResultInto(Column& column, size_t group_index) const override;
     Type GetResultType() const override;
     std::shared_ptr<Aggregation> Clone() const override;
     virtual ~SumAggregation() = default;
 
-    NumericFuncVisitor visitor;
+    NumericSumVisitor visitor;
 };
 
 struct AvgAggregation : public Aggregation {
-    AvgAggregation(const std::string col_name, std::string result_name = "");
-    void RunBatch(std::shared_ptr<Batch>) override;
-    void RunRow(std::shared_ptr<Batch>, size_t) override;
-    std::string GetResultValue() const override;
+    AvgAggregation(std::string col_name, std::string result_name = "");
+    void RunBatch(const std::shared_ptr<Batch>&, const std::vector<uint32_t>& group_indices, size_t max_group_index) override;
+    std::string GetResultValue(size_t group_index) const override;
+    void GetResultInto(Column& column, size_t group_index) const override;
     Type GetResultType() const override;
     std::shared_ptr<Aggregation> Clone() const override;
     virtual ~AvgAggregation() = default;
 
-    NumericFuncVisitor visitor;
+    NumericAvgVisitor visitor;
 };
 
 struct CountDistinctAggregation : public Aggregation {
-    CountDistinctAggregation(const std::string col_name, std::string result_name = "");
-    void RunBatch(std::shared_ptr<Batch>) override;
-    void RunRow(std::shared_ptr<Batch>, size_t) override;
-    std::string GetResultValue() const override;
+    CountDistinctAggregation(std::string col_name, std::string result_name = "");
+    void RunBatch(const std::shared_ptr<Batch>&, const std::vector<uint32_t>& group_indices, size_t max_group_index) override;
+    std::string GetResultValue(size_t group_index) const override;
+    void GetResultInto(Column& column, size_t group_index) const override;
     Type GetResultType() const override;
     std::shared_ptr<Aggregation> Clone() const override;
     virtual ~CountDistinctAggregation() = default;
@@ -72,27 +77,29 @@ struct CountDistinctAggregation : public Aggregation {
 };
 
 struct MaxAggregation : public Aggregation {
-    MaxAggregation(const std::string col_name, std::string result_name = "");
-    void RunBatch(std::shared_ptr<Batch>) override;
-    void RunRow(std::shared_ptr<Batch>, size_t) override;
-    std::string GetResultValue() const override;
+    MaxAggregation(std::string col_name, std::string result_name = "");
+    void RunBatch(const std::shared_ptr<Batch>&, const std::vector<uint32_t>& group_indices, size_t max_group_index) override;
+    std::string GetResultValue(size_t group_index) const override;
+    void GetResultInto(Column& column, size_t group_index) const override;
     Type GetResultType() const override;
     std::shared_ptr<Aggregation> Clone() const override;
     virtual ~MaxAggregation() = default;
 
-    NumericFuncVisitor numeric_visitor;
-    DateMinMaxVisitor date_visitor;
+    NumericMaxVisitor numeric_visitor;
+    DateMaxVisitor date_visitor;
+    StrMaxVisitor str_visitor;
 };
 
 struct MinAggregation : public Aggregation {
-    MinAggregation(const std::string col_name, std::string result_name = "");
-    void RunBatch(std::shared_ptr<Batch>) override;
-    void RunRow(std::shared_ptr<Batch>, size_t) override;
-    std::string GetResultValue() const override;
+    MinAggregation(std::string col_name, std::string result_name = "");
+    void RunBatch(const std::shared_ptr<Batch>&, const std::vector<uint32_t>& group_indices, size_t max_group_index) override;
+    std::string GetResultValue(size_t group_index) const override;
+    void GetResultInto(Column& column, size_t group_index) const override;
     Type GetResultType() const override;
     std::shared_ptr<Aggregation> Clone() const override;
     virtual ~MinAggregation() = default;
 
-    NumericFuncVisitor numeric_visitor;
-    DateMinMaxVisitor date_visitor;
+    NumericMinVisitor numeric_visitor;
+    DateMinVisitor date_visitor;
+    StrMinVisitor str_visitor;
 };

@@ -19,3 +19,11 @@ src/TestFiles/*_output.csv
 .clangd
 
 src/TestFiles
+
+experiments/
+Dockerfile
+data/
+
+.dockerignore
+
+*.md

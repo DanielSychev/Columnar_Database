@@ -36,6 +36,10 @@ std::string EscapeField(std::string_view s) {
 Writer::Writer(std::ostream& ss, char delimetr) : out_(ss), delimetr_(delimetr) {
 }
 
+void Writer::WriteNBytes(const char* buffer, size_t n) {
+    out_.write(buffer, n);
+}
+
 void Writer::CheckFlag(bool fl) {
     out_.put(fl ? '\n' : delimetr_);
 }

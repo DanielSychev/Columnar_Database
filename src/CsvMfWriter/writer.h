@@ -8,6 +8,7 @@
 class Writer {
 public:
     explicit Writer(std::ostream& ss, char delimetr = ',');
+    void WriteNBytes(const char* buffer, size_t n);
     void WriteElem(int64_t x, bool);
     void WriteElem(std::string_view s, bool); // флаг bool = true, если ставим '\n'
     size_t TellPos();

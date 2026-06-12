@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <vector>
 
-Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), batch_rows_count(batch_rows_count) {
+Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), max_rows_count(batch_rows_count) {
     has_schema = true;
     columns.resize(schema.NumColumns());
     for (size_t i = 0; i < columns.size(); ++i) {
@@ -13,7 +13,7 @@ Batch::Batch(const Schema& schema, size_t batch_rows_count) : schema(schema), ba
     }
 }
 
-Batch::Batch(size_t batch_rows_count) : batch_rows_count(batch_rows_count) {
+Batch::Batch(size_t batch_rows_count) : max_rows_count(batch_rows_count) {
 }
 
 void Batch::AddRow(Row&& row) {
@@ -21,13 +21,13 @@ void Batch::AddRow(Row&& row) {
         throw std::runtime_error("cannot add rows to batch without schema");
     }
     if (row.size() != columns.size()) {
-        throw std::runtime_error("wrong schema formart / wrong row lenght");
+        throw std::runtime_error("wrong schema format / wrong row length");
     }
-    if (rows_count >= batch_rows_count) {
+    if (rows_count >= max_rows_count) {
         throw std::runtime_error("batch is full");
     }
     for (size_t i = 0; i < row.size(); ++i) {
-        columns[i]->AddElem(std::move(row[i]));
+        columns[i]->AppendStr(std::move(row[i]));
     }
     ++rows_count;
 }
@@ -53,7 +53,7 @@ void Batch::AddColumn(size_t column_index, std::vector<std::string>&& values) {
 
 void Batch::AddColumn(size_t column_index, std::shared_ptr<Column> column) {
     if (!column) {
-        throw std::runtime_error("column is null");
+        throw std::runtime_error("column pointer is null");
     }
     ValidateColumnIndex(column_index, column->Size());
 
@@ -66,7 +66,7 @@ void Batch::AddColumn(std::shared_ptr<Column> column) {
         throw std::runtime_error("cannot append column to batch with schema");
     }
     if (!column) {
-        throw std::runtime_error("column is null");
+        throw std::runtime_error("column pointer is null");
     }
 
     SetRowsCount(column->Size());
@@ -78,7 +78,7 @@ void Batch::AppendColumn(const std::string& name, Type type, std::shared_ptr<Col
         throw std::runtime_error("cannot append named column to batch without schema");
     }
     if (!column) {
-        throw std::runtime_error("column is null");
+        throw std::runtime_error("column pointer is null");
     }
 
     SetRowsCount(column->Size());
@@ -100,6 +100,13 @@ const Column& Batch::ColumnAt(size_t column_index) const {
     return *columns[column_index];
 }
 
+const std::shared_ptr<Column>& Batch::ColumnSharedAt(size_t column_index) const {
+    if (column_index >= columns.size()) {
+        throw std::runtime_error("wrong column index");
+    }
+    return columns[column_index];
+}
+
 const Schema& Batch::GetSchema() const {
     if (!has_schema) {
         throw std::runtime_error("batch has no schema");
@@ -112,7 +119,7 @@ bool Batch::HasSchema() const {
 }
 
 void Batch::SetRowsCount(size_t row_count) {
-    if (row_count > batch_rows_count) {
+    if (row_count > max_rows_count) {
         throw std::runtime_error("wrong batch format");
     }
     if (rows_count == 0) {
@@ -133,7 +140,7 @@ size_t Batch::ColumnsCount() const {
 }
 
 size_t Batch::MaxRowsCount() const {
-    return batch_rows_count;
+    return max_rows_count;
 }
 
 bool Batch::Empty() const {
@@ -150,7 +157,7 @@ void Batch::ValidateColumnIndex(size_t column_index, size_t row_count) const {
     if (columns[column_index]->Size() != 0) {
         throw std::runtime_error("column is already filled");
     }
-    if (row_count > batch_rows_count) {
+    if (row_count > max_rows_count) {
         throw std::runtime_error("too many rows for batch");
     }
 }

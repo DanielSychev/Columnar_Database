@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <stdexcept>
@@ -11,21 +12,26 @@
 #include <vector>
 #include "CsvMfReader/reader.h"
 #include "CsvMfWriter/writer.h"
+#include "engine/data_storage/compression/bit_packing.h"
 #include "engine/data_storage/visitors/visitor.h"
 #include "utils.h"
 
 class Column {
 public:
-    virtual void AddElem(std::string&&) = 0; // чтобы move делать
-    virtual void Print(Writer&) const = 0;
-    virtual void Read(Reader&) = 0;
-    virtual void PrintElem(Writer&, size_t, bool) const = 0;
+    virtual void AppendStr(std::string&&) = 0; // чтобы move делать
+    virtual void PrintMf(Writer&) const = 0;
+    virtual void ReadMf(Reader&) = 0;
+    virtual void PrintElemCsv(Writer&, size_t, bool) const = 0;
     virtual std::string GetElemToString(size_t index) const = 0;
-    virtual void Accept(ColumnVisitor& visitor, size_t ind = -1u) const = 0;
+    virtual void Accept(ColumnVisitor& visitor, const std::vector<uint32_t>& group_indices, size_t max_group_index) const = 0;
     virtual bool Compare(const std::string&, size_t, CompareSign) const = 0;
+    virtual void Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const = 0;
     virtual std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const = 0;
-    virtual std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const = 0;
     virtual size_t Size() const = 0;
+    virtual void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const = 0;
+    virtual void BinaryReadFromBuf(const char*& ptr) = 0;
+    virtual int CompareAt(size_t index, const Column& other, size_t other_index) const = 0;
+    virtual void AppendFrom(const Column& other, size_t index) = 0;
     virtual ~Column() = default;
 };
 
@@ -68,24 +74,6 @@ std::vector<T> CopyAllowedValues(const std::vector<T>& data, const std::vector<b
     }
     return filtered_data;
 }
-
-template <typename T>
-std::vector<T> CopyReorderedValues(const std::vector<T>& data, const std::vector<size_t>& ordered) {
-    if (data.size() < ordered.size()) {
-        throw std::runtime_error("wrong reordered column format");
-    }
-
-    std::vector<T> reordered_data;
-    reordered_data.reserve(ordered.size());
-    for (auto& index: ordered) {
-        if (index >= data.size()) {
-            throw std::out_of_range("index out of range in CopyReorderedValues");
-        }
-        reordered_data.push_back(data[index]);
-    }
-    return reordered_data;
-}
-
 
 inline __int128_t ParseInt128(std::string_view value) {
     if (value.empty()) {
@@ -197,22 +185,23 @@ class NumericColumn : public Column {
 public:
     NumericColumn() = default;
     NumericColumn(const std::vector<T>& data_) : data(data_) {}
+    NumericColumn(std::vector<T>&& data_) : data(std::move(data_)) {}
     explicit NumericColumn(const std::vector<std::string>& values)
         : data(column_detail::ParseNumericValues<T>(values)) {}
 
-    void AddElem(std::string&& value) override {
+    void AppendStr(std::string&& value) override {
         data.push_back(column_detail::ParseNumeric<T>(value));
     }
 
-    void Print(Writer& writer) const override {
-        writer.BinaryWriteVector(data);
+    void PrintMf(Writer& writer) const override {
+        bit_packing::Encode(writer, data);
     }
 
-    void Read(Reader& reader) override {
-        reader.BinaryReadVector(data);
+    void ReadMf(Reader& reader) override {
+        bit_packing::Decode(reader, data);
     }
 
-    void PrintElem(Writer& writer, size_t index, bool is_last) const override {
+    void PrintElemCsv(Writer& writer, size_t index, bool is_last) const override {
         if (index >= data.size()) { // not bug, a feature
             return;
         }
@@ -230,8 +219,8 @@ public:
         }
     }
 
-    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override {
-        visitor.Visit(*this, ind);
+    void Accept(ColumnVisitor& visitor, const std::vector<uint32_t>& group_indices, size_t max_group_index) const override {
+        visitor.Visit(*this, group_indices, max_group_index);
     }
 
     bool Compare(const std::string& elem, size_t index, CompareSign sign) const override {
@@ -269,16 +258,68 @@ public:
         return column_detail::BasicCompare(data[index], column_detail::ParseNumeric<T>(elem), sign);
     }
 
+    void Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const override {
+        if (sign == CompareSign::LIKE || sign == CompareSign::NOT_LIKE) {
+            throw std::invalid_argument("LIKE and NOT_LIKE are supported only for string columns");
+        }
+        if (sign == CompareSign::IN) {
+            std::vector<T> parsed;
+            const char* p = value.data();
+            const char* end = p + value.size();
+            while (p < end) {
+                const char* comma = std::find(p, end, ',');
+                if (comma != end) {
+                    parsed.push_back(column_detail::ParseNumeric<T>(std::string_view(p, comma - p)));
+                    p = comma + 1;
+                } else {
+                    parsed.push_back(column_detail::ParseNumeric<T>(std::string_view(p, end - p)));
+                    p = end;
+                }
+            }
+            for (size_t i = 0; i < data.size(); ++i) {
+                if (banned[i]) continue;
+                bool found = false;
+                for (const T& p : parsed) {
+                    if (data[i] == p) { found = true; break; }
+                }
+                if (!found) banned[i] = true;
+            }
+            return;
+        }
+        const T parsed = column_detail::ParseNumeric<T>(value);
+        for (size_t i = 0; i < data.size(); ++i) {
+            if (banned[i]) continue;
+            if (!column_detail::BasicCompare(data[i], parsed, sign)) {
+                banned[i] = true;
+            }
+        }
+    }
+
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override {
         return std::make_shared<NumericColumn<T>>(column_detail::CopyAllowedValues(data, banned));
     }
 
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override {
-        return std::make_shared<NumericColumn<T>>(column_detail::CopyReorderedValues(data, ordered));
-    }
-
     size_t Size() const override {
         return data.size();
+    }
+
+    void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override {
+        if (index >= data.size()) {
+            throw std::out_of_range("index out of range in BinaryWriteInBuf");
+        }
+        const char* ptr = reinterpret_cast<const char*>(&data[index]);
+        buf.insert(buf.end(), ptr, ptr + sizeof(T));
+    }
+
+    void BinaryReadFromBuf(const char*& ptr) override {
+        T value;
+        std::memcpy(&value, ptr, sizeof(T));
+        ptr += sizeof(T);
+        data.push_back(value);
+    }
+
+    void AppendRaw(T value) {
+        data.push_back(value);
     }
 
     const std::vector<T>& Data() const {
@@ -290,6 +331,16 @@ public:
             throw std::out_of_range("index out of range in ValueAt");
         }
         return data[index];
+    }
+
+    int CompareAt(size_t index, const Column& other, size_t other_index) const override {
+        const auto& o = static_cast<const NumericColumn<T>&>(other);
+        return (data[index] > o.data[other_index]) - (data[index] < o.data[other_index]);
+    }
+
+    void AppendFrom(const Column& other, size_t index) override {
+        const auto& o = static_cast<const NumericColumn<T>&>(other);
+        AppendRaw(o.ValueAt(index));
     }
 
     ~NumericColumn() override = default;
@@ -310,46 +361,86 @@ using DoubleColumn = NumericColumn<double>;
 class StrColumn : public Column {
 public:
     StrColumn() = default;
-    StrColumn(const std::vector<std::string>& data_) : data(data_) {}
-    StrColumn(std::vector<std::string>&& data_) : data(std::move(data_)) {}
+    explicit StrColumn(const std::vector<std::string>& data_);
+    explicit StrColumn(std::vector<std::string>&& data_);
     StrColumn(const StrColumn& other, const std::vector<bool>& banned);
-    void AddElem(std::string&&) override;
-    void Print(Writer&) const override;
-    void Read(Reader&) override;
-    void PrintElem(Writer&, size_t, bool) const override;
+    void AppendStr(std::string&&) override;
+    void PrintMf(Writer&) const override;
+    void ReadMf(Reader&) override;
+    void PrintElemCsv(Writer&, size_t, bool) const override;
     std::string GetElemToString(size_t index) const override;
-    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
+    std::string_view GetElemView(size_t index) const;
+    void Accept(ColumnVisitor& visitor, const std::vector<uint32_t>& group_indices, size_t max_group_index) const override;
     bool Compare(const std::string&, size_t, CompareSign) const override;
+    void Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
-    const std::vector<std::string>& Data() const;
+    void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override;
+    void BinaryReadFromBuf(const char*& ptr) override;
+    void AppendRaw(std::string_view sv);
     std::string ValueAt(size_t index) const;
+    StrColumn(std::vector<char>&& buf_, std::vector<size_t>&& offsets_, size_t count_);
+    int CompareAt(size_t index, const Column& other, size_t other_index) const override;
+    void AppendFrom(const Column& other, size_t index) override;
     ~StrColumn() override = default;
-protected:
-    std::vector<std::string> data;
-};
-
-class TimeStampColumn : public StrColumn {
-public:
-    TimeStampColumn() = default;
-    TimeStampColumn(const std::vector<std::string>& data_) : StrColumn(data_) {}
-    TimeStampColumn(std::vector<std::string>&& data_) : StrColumn(std::move(data_)) {}
-    TimeStampColumn(const TimeStampColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
-    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
-    ~TimeStampColumn() override = default;
 private:
+    std::vector<char> buf;
+    std::vector<size_t> offsets{0};
+    size_t count = 0;
 };
 
-class DateColumn : public StrColumn {
+class DateColumn : public Column {
 public:
     DateColumn() = default;
-    DateColumn(const std::vector<std::string>& data_) : StrColumn(data_) {}
-    DateColumn(std::vector<std::string>&& data_) : StrColumn(std::move(data_)) {}
-    DateColumn(const DateColumn& other, const std::vector<bool>& banned) : StrColumn(other, banned) {}
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
-    void Accept(ColumnVisitor& visitor, size_t ind = -1u) const override;
+    DateColumn(const std::vector<Date>& data_) : data(data_) {}
+    DateColumn(std::vector<Date>&& data_) : data(std::move(data_)) {}
+    explicit DateColumn(const std::vector<std::string>& values);
+    void AppendStr(std::string&&) override;
+    void PrintMf(Writer&) const override;
+    void ReadMf(Reader&) override;
+    void PrintElemCsv(Writer&, size_t, bool) const override;
+    std::string GetElemToString(size_t index) const override;
+    void Accept(ColumnVisitor& visitor, const std::vector<uint32_t>& group_indices, size_t max_group_index) const override;
+    bool Compare(const std::string&, size_t, CompareSign) const override;
+    void Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const override;
+    std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
+    size_t Size() const override;
+    void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override;
+    void BinaryReadFromBuf(const char*& ptr) override;
+    void AppendRaw(Date date);
+    const std::vector<Date>& Data() const;
+    Date ValueAt(size_t index) const;
+    int CompareAt(size_t index, const Column& other, size_t other_index) const override;
+    void AppendFrom(const Column& other, size_t index) override;
     ~DateColumn() override = default;
 private:
+    std::vector<Date> data;
+};
+
+class TimeStampColumn : public Column {
+public:
+    TimeStampColumn() = default;
+    TimeStampColumn(const std::vector<TimeStamp>& data_) : data(data_) {}
+    TimeStampColumn(std::vector<TimeStamp>&& data_) : data(std::move(data_)) {}
+    explicit TimeStampColumn(const std::vector<std::string>& values);
+    void AppendStr(std::string&&) override;
+    void PrintMf(Writer&) const override;
+    void ReadMf(Reader&) override;
+    void PrintElemCsv(Writer&, size_t, bool) const override;
+    std::string GetElemToString(size_t index) const override;
+    void Accept(ColumnVisitor& visitor, const std::vector<uint32_t>& group_indices, size_t max_group_index) const override;
+    bool Compare(const std::string&, size_t, CompareSign) const override;
+    void Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const override;
+    std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
+    size_t Size() const override;
+    void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override;
+    void BinaryReadFromBuf(const char*& ptr) override;
+    void AppendRaw(TimeStamp timestamp);
+    const std::vector<TimeStamp>& Data() const;
+    TimeStamp ValueAt(size_t index) const;
+    int CompareAt(size_t index, const Column& other, size_t other_index) const override;
+    void AppendFrom(const Column& other, size_t index) override;
+    ~TimeStampColumn() override = default;
+private:
+    std::vector<TimeStamp> data;
 };

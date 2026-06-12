@@ -4,6 +4,10 @@
 Reader::Reader(std::istream& ss, char delimetr) : file_(ss), delimetr_(delimetr) {
 }
 
+bool Reader::ReadNBytes(char* buffer, size_t n) {
+    return static_cast<bool>(file_.read(buffer, n));
+}
+
 bool Reader::ReadLine(std::vector<std::string>& result) {
     result.clear();
     char c;
@@ -25,7 +29,10 @@ bool Reader::ReadLine(std::vector<std::string>& result) {
         } else if (in_quotes) {
             cur_string += c;
         } else {
-            if (c == '\n') {
+            if (c == '\n' || c == '\r') {
+                if (c == '\r' && file_.peek() == '\n') {
+                    file_.get();
+                }
                 break;
             } else if (c == delimetr_) {
                 result.push_back(cur_string);

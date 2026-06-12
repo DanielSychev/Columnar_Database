@@ -6,6 +6,7 @@
 #include "engine/data_storage/batch.h"
 #include "engine/data_storage/schema.h"
 #include "engine/serialization/batch_serialization.h"
+#include "utils.h"
 
 namespace {
 Schema MakeTestSchema() {
@@ -79,12 +80,12 @@ TEST(BatchSerialization, CanWriteSchemaLessBatchBuiltFromColumns) {
     Batch batch(10);
 
     auto id_column = std::make_shared<Int64Column>();
-    id_column->AddElem("1");
-    id_column->AddElem("2");
+    id_column->AppendStr(std::string("1"));
+    id_column->AppendStr(std::string("2"));
 
     auto name_column = std::make_shared<StrColumn>();
-    name_column->AddElem("Alice");
-    name_column->AddElem("Bob");
+    name_column->AppendStr(std::string("Alice"));
+    name_column->AppendStr(std::string("Bob"));
 
     batch.AddColumn(id_column);
     batch.AddColumn(name_column);
