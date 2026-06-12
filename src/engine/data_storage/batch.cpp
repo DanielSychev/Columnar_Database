@@ -21,7 +21,7 @@ void Batch::AddRow(Row&& row) {
         throw std::runtime_error("cannot add rows to batch without schema");
     }
     if (row.size() != columns.size()) {
-        throw std::runtime_error("wrong schema formart / wrong row lenght");
+        throw std::runtime_error("wrong schema format / wrong row length");
     }
     if (rows_count >= max_rows_count) {
         throw std::runtime_error("batch is full");

@@ -100,7 +100,7 @@ public:
             return nullptr;
         }
         BuildBanned(batch);
-        return batch;
+        return batch;//Compact(batch);
     }
 private:
     void BuildBanned(std::shared_ptr<Batch>& batch) {
@@ -118,6 +118,25 @@ private:
             batch->ColumnAt(column_index).Filter(filter_operator_->values[i], filter_operator_->signs[i], banned);
         }
     }
+
+    // std::shared_ptr<Batch> Compact(const std::shared_ptr<Batch>& batch) {
+    //     if (!batch->HasMask()) {
+    //         return batch;
+    //     }
+    //     const auto& banned = batch->banned_rows;
+    //     size_t allowed = 0;
+    //     for (bool b : banned) {
+    //         if (!b) ++allowed;
+    //     }
+    //     if (allowed == batch->RowsCount()) {
+    //         return batch;
+    //     }
+    //     auto result = std::make_shared<Batch>(batch->GetSchema(), allowed);
+    //     for (size_t i = 0; i < batch->ColumnsCount(); ++i) {
+    //         result->AddColumn(i, batch->ColumnSharedAt(i)->CopyFiltered(banned));
+    //     }
+    //     return result;
+    // }
 
     std::shared_ptr<FilterOperator> filter_operator_;
     std::shared_ptr<PipelineExecutor> child_executor_;

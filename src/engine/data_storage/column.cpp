@@ -7,22 +7,6 @@
 #include <stdexcept>
 #include <string>
 
-template <typename T>
-void PrintVisitor(Writer& w, const std::vector<T>& v) {
-    size_t size = v.size();
-    for (size_t i = 0; i < size; ++i) {
-        w.WriteElem(v[i], i == size - 1);
-    }
-}
-
-template <typename T>
-void PrintElemVisitor(Writer& w, const std::vector<T>& v, size_t i, bool b) {
-    if (i >= v.size()) { // not bug, a feature
-        return;
-    }
-    w.WriteElem(v[i], b);
-}
-
 namespace {
 bool LikeCompare(std::string_view value, std::string_view pattern) {
     if (pattern.find('_') == std::string_view::npos) {
@@ -240,19 +224,6 @@ std::shared_ptr<Column> StrColumn::CopyFiltered(const std::vector<bool>& banned)
     return std::make_shared<StrColumn>(*this, banned);
 }
 
-std::shared_ptr<Column> StrColumn::CopyReordered(const std::vector<size_t>& ordered) const {
-    std::vector<char> new_buf;
-    std::vector<size_t> new_offsets;
-    new_offsets.reserve(ordered.size() + 1);
-    new_offsets.push_back(0);
-    for (size_t idx : ordered) {
-        const auto sv = GetElemView(idx);
-        new_buf.insert(new_buf.end(), sv.begin(), sv.end());
-        new_offsets.push_back(new_buf.size());
-    }
-    return std::make_shared<StrColumn>(std::move(new_buf), std::move(new_offsets), ordered.size());
-}
-
 size_t StrColumn::Size() const {
     return count;
 }
@@ -375,10 +346,6 @@ void DateColumn::Filter(const std::string& value, CompareSign sign, std::vector<
 
 std::shared_ptr<Column> DateColumn::CopyFiltered(const std::vector<bool>& banned) const {
     return std::make_shared<DateColumn>(column_detail::CopyAllowedValues(data, banned));
-}
-
-std::shared_ptr<Column> DateColumn::CopyReordered(const std::vector<size_t>& ordered) const {
-    return std::make_shared<DateColumn>(column_detail::CopyReorderedValues(data, ordered));
 }
 
 size_t DateColumn::Size() const {
@@ -574,10 +541,6 @@ void TimeStampColumn::Filter(const std::string& value, CompareSign sign, std::ve
 
 std::shared_ptr<Column> TimeStampColumn::CopyFiltered(const std::vector<bool>& banned) const {
     return std::make_shared<TimeStampColumn>(column_detail::CopyAllowedValues(data, banned));
-}
-
-std::shared_ptr<Column> TimeStampColumn::CopyReordered(const std::vector<size_t>& ordered) const {
-    return std::make_shared<TimeStampColumn>(column_detail::CopyReorderedValues(data, ordered));
 }
 
 size_t TimeStampColumn::Size() const {

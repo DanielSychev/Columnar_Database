@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "CsvMfReader/reader.h"
@@ -90,14 +91,6 @@ TEST(NumericColumn, CopyFiltered) {
     EXPECT_EQ(filtered->GetElemToString(1), "3");
 }
 
-TEST(NumericColumn, CopyReordered) {
-    Int64Column col(std::vector<std::string>{"10", "20", "30"});
-    auto reordered = col.CopyReordered(std::vector<size_t>{2, 0, 1});
-    EXPECT_EQ(reordered->GetElemToString(0), "30");
-    EXPECT_EQ(reordered->GetElemToString(1), "10");
-    EXPECT_EQ(reordered->GetElemToString(2), "20");
-}
-
 TEST(NumericColumn, BinaryWriteReadBufRoundTrip) {
     Int64Column col(std::vector<std::string>{"123", "456"});
     std::vector<char> buf;
@@ -168,15 +161,11 @@ TEST(StrColumn, CompareAt) {
     EXPECT_EQ(a.CompareAt(1, b, 1), 0);
 }
 
-TEST(StrColumn, AppendFromAndReorder) {
+TEST(StrColumn, AppendFrom) {
     StrColumn src(std::vector<std::string>{"one", "two", "three"});
     StrColumn dst;
     dst.AppendFrom(src, 2);
     EXPECT_EQ(dst.GetElemView(0), "three");
-
-    auto reordered = src.CopyReordered(std::vector<size_t>{1, 0});
-    EXPECT_EQ(reordered->GetElemToString(0), "two");
-    EXPECT_EQ(reordered->GetElemToString(1), "one");
 }
 
 TEST(StrColumn, MfRoundTrip) {

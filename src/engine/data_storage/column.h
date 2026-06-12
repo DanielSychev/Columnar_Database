@@ -27,7 +27,6 @@ public:
     virtual bool Compare(const std::string&, size_t, CompareSign) const = 0;
     virtual void Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const = 0;
     virtual std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const = 0;
-    virtual std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const = 0;
     virtual size_t Size() const = 0;
     virtual void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const = 0;
     virtual void BinaryReadFromBuf(const char*& ptr) = 0;
@@ -75,24 +74,6 @@ std::vector<T> CopyAllowedValues(const std::vector<T>& data, const std::vector<b
     }
     return filtered_data;
 }
-
-template <typename T>
-std::vector<T> CopyReorderedValues(const std::vector<T>& data, const std::vector<size_t>& ordered) {
-    if (data.size() < ordered.size()) {
-        throw std::runtime_error("wrong reordered column format");
-    }
-
-    std::vector<T> reordered_data;
-    reordered_data.reserve(ordered.size());
-    for (auto& index: ordered) {
-        if (index >= data.size()) {
-            throw std::out_of_range("index out of range in CopyReorderedValues");
-        }
-        reordered_data.push_back(data[index]);
-    }
-    return reordered_data;
-}
-
 
 inline __int128_t ParseInt128(std::string_view value) {
     if (value.empty()) {
@@ -318,10 +299,6 @@ public:
         return std::make_shared<NumericColumn<T>>(column_detail::CopyAllowedValues(data, banned));
     }
 
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override {
-        return std::make_shared<NumericColumn<T>>(column_detail::CopyReorderedValues(data, ordered));
-    }
-
     size_t Size() const override {
         return data.size();
     }
@@ -397,7 +374,6 @@ public:
     bool Compare(const std::string&, size_t, CompareSign) const override;
     void Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
     void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override;
     void BinaryReadFromBuf(const char*& ptr) override;
@@ -428,7 +404,6 @@ public:
     bool Compare(const std::string&, size_t, CompareSign) const override;
     void Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
     void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override;
     void BinaryReadFromBuf(const char*& ptr) override;
@@ -457,7 +432,6 @@ public:
     bool Compare(const std::string&, size_t, CompareSign) const override;
     void Filter(const std::string& value, CompareSign sign, std::vector<bool>& banned) const override;
     std::shared_ptr<Column> CopyFiltered(const std::vector<bool>& banned) const override;
-    std::shared_ptr<Column> CopyReordered(const std::vector<size_t>& ordered) const override;
     size_t Size() const override;
     void BinaryWriteInBuf(std::vector<char>& buf, size_t index) const override;
     void BinaryReadFromBuf(const char*& ptr) override;
